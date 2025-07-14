@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environment
+.env
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# FAISS vector store and docstore
+Backend/vector_KB/
+
+# Test and cache
+Backend/.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Compiled files
+*.so
+
+# Local data
+Backend/last_fingerprint.json
+Backend/dialogues.json 

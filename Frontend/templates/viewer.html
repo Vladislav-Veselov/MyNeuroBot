@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-[#1A1E27]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Просмотр базы знаний</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.css') }}">
+</head>
+<body class="h-full bg-[#1A1E27] text-white">
+    <div class="min-h-full">
+        <!-- Navigation Bar -->
+        <nav class="bg-[#1E2328] border-b border-[#2D3446]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Logo/Brand -->
+                    <div class="flex items-center">
+                        <img src="{{ url_for('static', filename='logo.png') }}" alt="NeuroBot Logo" class="h-8 w-auto mr-3">
+                        <span class="text-xl font-bold text-white">NeuroBot</span>
+                    </div>
+                    
+                    <!-- Navigation Links -->
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-8">
+                            <a href="/" class="text-[#DC4918] hover:text-[#FF6B35] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Редактирование
+                            </a>
+                            <a href="/analytics" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Аналитика
+                            </a>
+                            <a href="/settings" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Настройки
+                            </a>
+                            <a href="/chatbot" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Чатбот
+                            </a>
+                            <a href="/about" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                О нас
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile menu button -->
+                    <div class="md:hidden">
+                        <button type="button" class="text-[#A0AEC0] hover:text-white focus:outline-none focus:text-white">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mobile menu -->
+            <div class="md:hidden hidden">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-[#1E2328] border-t border-[#2D3446]">
+                    <a href="/" class="text-[#DC4918] hover:text-[#FF6B35] block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Редактирование
+                    </a>
+                    <a href="/analytics" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Аналитика
+                    </a>
+                    <a href="/settings" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Настройки
+                    </a>
+                    <a href="/chatbot" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Чатбот
+                    </a>
+                    <a href="/about" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        О нас
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Header -->
+        <header class="bg-[#242A36] shadow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold text-white">Редактирование базы знаний</h1>
+                    <div class="flex items-center space-x-4">
+                        <button id="help-btn" class="btn-secondary">
+                            Справка
+                        </button>
+                        <button id="add-qa-btn" class="btn-primary">
+                            Добавить вопрос
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Stats section -->
+            <div id="stats" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Stats cards will be inserted here -->
+            </div>
+
+            <!-- Search and controls -->
+            <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+                <div class="flex flex-col sm:flex-row gap-4 flex-1">
+                    <!-- Regular search -->
+                    <div class="relative flex-1 max-w-lg">
+                        <input type="text" id="search-input" 
+                               class="w-full pl-10 pr-4 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
+                               placeholder="Поиск по точному совпадению...">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-[#718096]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <!-- Semantic search -->
+                    <div class="relative flex-1 max-w-lg">
+                        <input type="text" id="semantic-search-input" 
+                               class="w-full pl-10 pr-4 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
+                               placeholder="Семантический поиск...">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-[#718096]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="first-page" class="btn-outline" disabled>«</button>
+                    <button id="prev-page" class="btn-outline" disabled>‹</button>
+                    <span id="page-info" class="text-[#A0AEC0]">Страница 1 из 1</span>
+                    <button id="next-page" class="btn-outline" disabled>›</button>
+                    <button id="last-page" class="btn-outline" disabled>»</button>
+                </div>
+            </div>
+
+            <!-- Documents container -->
+            <div id="documents-container" class="space-y-4">
+                <!-- Document cards will be inserted here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Document modal -->
+    <div id="document-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-white">Просмотр вопроса</h3>
+                    <button id="close-modal" class="text-[#718096] hover:text-white">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="modal-content" class="space-y-4">
+                    <!-- Content will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Q&A modal -->
+    <div id="add-qa-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-2xl w-full mx-4">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-white">Добавить вопрос и ответ</h3>
+                    <button id="close-add-qa-modal" class="text-[#718096] hover:text-white">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <form id="add-qa-form" class="space-y-4">
+                    <div>
+                        <label for="add-question" class="block text-sm font-medium text-[#A0AEC0] mb-1">Вопрос</label>
+                        <textarea id="add-question" name="question" rows="3" 
+                                class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
+                                placeholder="Введите вопрос..."></textarea>
+                    </div>
+                    <div>
+                        <label for="add-answer" class="block text-sm font-medium text-[#A0AEC0] mb-1">Ответ</label>
+                        <textarea id="add-answer" name="answer" rows="6" 
+                                class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
+                                placeholder="Введите ответ..."></textarea>
+                    </div>
+                    <div id="add-qa-error" class="text-[#DC4918] text-sm"></div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" id="cancel-add-qa" class="btn-outline">Отмена</button>
+                        <button type="submit" class="btn-primary">Добавить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Q&A modal -->
+    <div id="edit-qa-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-2xl w-full mx-4">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-white">Редактировать вопрос и ответ</h3>
+                    <button id="close-edit-qa-modal" class="text-[#718096] hover:text-white">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <form id="edit-qa-form" class="space-y-4">
+                    <input type="hidden" id="edit-document-id">
+                    <div>
+                        <label for="edit-question" class="block text-sm font-medium text-[#A0AEC0] mb-1">Вопрос</label>
+                        <textarea id="edit-question" name="question" rows="3" 
+                                class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
+                                placeholder="Введите вопрос..."></textarea>
+                    </div>
+                    <div>
+                        <label for="edit-answer" class="block text-sm font-medium text-[#A0AEC0] mb-1">Ответ</label>
+                        <textarea id="edit-answer" name="answer" rows="6" 
+                                class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
+                                placeholder="Введите ответ..."></textarea>
+                    </div>
+                    <div id="edit-qa-error" class="text-[#DC4918] text-sm"></div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" id="cancel-edit-qa" class="btn-outline">Отмена</button>
+                        <button type="submit" class="btn-primary">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div id="delete-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-white">Подтверждение удаления</h3>
+                    <button id="close-delete-modal" class="text-[#718096] hover:text-white">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-[#A0AEC0] mb-6">Вы уверены, что хотите удалить этот вопрос? Это действие нельзя отменить.</p>
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel-delete" class="btn-outline">Отмена</button>
+                    <button id="confirm-delete" class="btn-primary bg-red-600 hover:bg-red-700">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help modal -->
+    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto" style="background-color: #242A36 !important;">
+            <div class="p-6" style="background-color: #242A36 !important;">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-white">Справка по работе с базой знаний</h3>
+                    <button id="close-help-modal" class="text-[#718096] hover:text-white">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="space-y-6 text-[#A0AEC0]" style="background-color: #242A36 !important;">
+                    <div>
+                        <h4 class="text-lg font-semibold text-[#DC4918] mb-2">Поиск</h4>
+                        <div class="space-y-2">
+                            <p>В базе знаний доступны два типа поиска:</p>
+                            <ul class="list-disc pl-6 space-y-2">
+                                <li><span class="font-medium text-white">Поиск по точному совпадению</span> - ищет точные совпадения текста в вопросах и ответах. Используйте для поиска конкретных слов или фраз.</li>
+                                <li><span class="font-medium text-white">Семантический поиск</span> - ищет вопросы и ответы по смыслу, даже если слова не совпадают точно. Используйте для поиска по теме или концепции.</li>
+                            </ul>
+                            <p class="text-sm mt-2">Примечание: Поиски работают независимо друг от друга. При использовании одного типа поиска, другой автоматически очищается.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-lg font-semibold text-[#DC4918] mb-2">Управление базой знаний</h4>
+                        <div class="space-y-2">
+                            <ul class="list-disc pl-6 space-y-2">
+                                <li><span class="font-medium text-white">Добавить вопрос</span> - создает новую запись в базе знаний. Заполните поля "Вопрос" и "Ответ".</li>
+                                <li><span class="font-medium text-white">Редактирование</span> - нажмите на кнопку ✎ рядом с вопросом для изменения его содержимого.</li>
+                                <li><span class="font-medium text-white">Удаление</span> - нажмите на кнопку × рядом с вопросом для его удаления. Требуется подтверждение.</li>
+                                <li><span class="font-medium text-white">Просмотр</span> - кликните на карточку вопроса для просмотра полного содержимого.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-lg font-semibold text-[#DC4918] mb-2">Навигация</h4>
+                        <div class="space-y-2">
+                            <ul class="list-disc pl-6 space-y-2">
+                                <li>Используйте кнопки навигации для перемещения между страницами результатов поиска.</li>
+                                <li>В верхней части страницы отображается статистика базы знаний.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-lg font-semibold text-[#DC4918] mb-2">Советы</h4>
+                        <div class="space-y-2">
+                            <ul class="list-disc pl-6 space-y-2">
+                                <li>Для точного поиска используйте конкретные слова или фразы.</li>
+                                <li>Для поиска по теме используйте семантический поиск, описывая интересующий вас вопрос своими словами.</li>
+                                <li>При добавлении новых вопросов старайтесь формулировать их четко и однозначно.</li>
+                                <li>Регулярно проверяйте и обновляйте содержимое базы знаний для поддержания её актуальности.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/viewer.js') }}"></script>
+</body>
+</html> 

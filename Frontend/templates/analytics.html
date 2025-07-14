@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-[#1A1E27]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аналитика - NeuroBot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/analytics.css') }}">
+</head>
+<body class="h-full bg-[#1A1E27] text-white">
+    <div class="min-h-full">
+        <!-- Navigation Bar -->
+        <nav class="bg-[#1E2328] border-b border-[#2D3446]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Logo/Brand -->
+                    <div class="flex items-center">
+                        <img src="{{ url_for('static', filename='logo.png') }}" alt="NeuroBot Logo" class="h-8 w-auto mr-3">
+                        <span class="text-xl font-bold text-white">NeuroBot</span>
+                    </div>
+                    
+                    <!-- Navigation Links -->
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-8">
+                            <a href="/" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Редактирование
+                            </a>
+                            <a href="/analytics" class="text-[#DC4918] hover:text-[#FF6B35] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Аналитика
+                            </a>
+                            <a href="/settings" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Настройки
+                            </a>
+                            <a href="/chatbot" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Чатбот
+                            </a>
+                            <a href="/about" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                О нас
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile menu button -->
+                    <div class="md:hidden">
+                        <button type="button" class="text-[#A0AEC0] hover:text-white focus:outline-none focus:text-white">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mobile menu -->
+            <div class="md:hidden hidden">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-[#1E2328] border-t border-[#2D3446]">
+                    <a href="/" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Редактирование
+                    </a>
+                    <a href="/analytics" class="text-[#DC4918] hover:text-[#FF6B35] block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Аналитика
+                    </a>
+                    <a href="/settings" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Настройки
+                    </a>
+                    <a href="/chatbot" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Чатбот
+                    </a>
+                    <a href="/about" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        О нас
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-white mb-4">Аналитика чат-бота</h1>
+                <p class="text-[#A0AEC0]">Статистика и история диалогов</p>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-[#1E2328] rounded-lg p-6 border border-[#2D3446]">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-[#DC4918] rounded-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-[#A0AEC0]">Всего сессий</p>
+                            <p class="text-2xl font-bold text-white" id="total-sessions">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-[#1E2328] rounded-lg p-6 border border-[#2D3446]">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-[#DC4918] rounded-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-[#A0AEC0]">Всего сообщений</p>
+                            <p class="text-2xl font-bold text-white" id="total-messages">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-[#1E2328] rounded-lg p-6 border border-[#2D3446]">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-[#DC4918] rounded-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-[#A0AEC0]">Обновлено</p>
+                            <p class="text-2xl font-bold text-white" id="storage-created">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-[#1E2328] rounded-lg p-6 border border-[#2D3446]">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-[#DC4918] rounded-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-[#A0AEC0]">Размер файла</p>
+                            <p class="text-2xl font-bold text-white" id="file-size">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat History Section -->
+            <div class="bg-[#1E2328] rounded-lg border border-[#2D3446]">
+                <div class="p-6 border-b border-[#2D3446]">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-bold text-white">История диалогов</h2>
+                        <div class="flex space-x-2">
+                            <button id="refresh-btn" class="bg-[#DC4918] hover:bg-[#FF6B35] text-white px-4 py-2 rounded-lg transition-colors duration-200">
+                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Обновить
+                            </button>
+                            <button id="clear-all-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                                Очистить все
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Sessions List -->
+                <div class="p-6">
+                    <div id="sessions-container" class="space-y-4">
+                        <!-- Sessions will be loaded here -->
+                        <div class="text-center text-[#A0AEC0] py-8">
+                            <svg class="w-12 h-12 mx-auto mb-4 text-[#2D3446]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                            <p>Загрузка диалогов...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Dialogue Modal -->
+    <div id="dialogue-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-[#1E2328] rounded-lg w-full max-w-4xl" style="height: 90vh; display: flex; flex-direction: column;">
+                <!-- Modal Header -->
+                <div class="p-6 border-b border-[#2D3446] flex items-center justify-between" style="flex-shrink: 0;">
+                    <h3 class="text-xl font-bold text-white">Диалог</h3>
+                    <button id="close-modal" class="text-[#A0AEC0] hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Content -->
+                <div class="flex-1" style="min-height: 0; overflow: hidden; position: relative;">
+                    <div id="dialogue-messages" class="h-full overflow-y-auto p-6 space-y-4" style="height: 100%;">
+                        <!-- Messages will be loaded here -->
+                    </div>
+                    
+                    <!-- Scroll to top button -->
+                    <button id="scroll-to-top" class="absolute bottom-4 right-4 bg-[#DC4918] hover:bg-[#FF6B35] text-white p-3 rounded-full shadow-lg transition-all duration-200 opacity-0 pointer-events-none">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="p-6 border-t border-[#2D3446] flex justify-between" style="flex-shrink: 0;">
+                    <div class="text-sm text-[#A0AEC0]">
+                        <span id="dialogue-info">Сессия: </span>
+                    </div>
+                    <button id="delete-session" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+                        Удалить сессию
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+</body>
+</html> 

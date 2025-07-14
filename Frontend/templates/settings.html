@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-[#1A1E27]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройки - NeuroBot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.css') }}">
+</head>
+<body class="h-full bg-[#1A1E27] text-white">
+    <div class="min-h-full">
+        <!-- Navigation Bar -->
+        <nav class="bg-[#1E2328] border-b border-[#2D3446]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Logo/Brand -->
+                    <div class="flex items-center">
+                        <img src="{{ url_for('static', filename='logo.png') }}" alt="NeuroBot Logo" class="h-8 w-auto mr-3">
+                        <span class="text-xl font-bold text-white">NeuroBot</span>
+                    </div>
+                    
+                    <!-- Navigation Links -->
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-8">
+                            <a href="/" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Редактирование
+                            </a>
+                            <a href="/analytics" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Аналитика
+                            </a>
+                            <a href="/settings" class="text-[#DC4918] hover:text-[#FF6B35] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Настройки
+                            </a>
+                            <a href="/chatbot" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Чатбот
+                            </a>
+                            <a href="/about" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                О нас
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile menu button -->
+                    <div class="md:hidden">
+                        <button type="button" class="text-[#A0AEC0] hover:text-white focus:outline-none focus:text-white">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mobile menu -->
+            <div class="md:hidden hidden">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-[#1E2328] border-t border-[#2D3446]">
+                    <a href="/" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Редактирование
+                    </a>
+                    <a href="/analytics" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Аналитика
+                    </a>
+                    <a href="/settings" class="text-[#DC4918] hover:text-[#FF6B35] block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Настройки
+                    </a>
+                    <a href="/chatbot" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Чатбот
+                    </a>
+                    <a href="/about" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        О нас
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="bg-[#242A36] rounded-lg shadow-lg p-6">
+                <div class="mb-6">
+                    <h1 class="text-3xl font-bold text-white mb-2">Настройки чат-бота</h1>
+                    <p class="text-[#A0AEC0]">Настройте стиль общения и поведение вашего чат-бота</p>
+                </div>
+
+                <form id="settings-form" class="space-y-6">
+                    <!-- Tone of Communication -->
+                    <div class="bg-[#1E2328] rounded-lg p-4">
+                        <label class="block text-lg font-medium text-white mb-3">Тон общения</label>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <label class="flex items-center p-3 rounded-lg border-2 border-transparent hover:border-[#DC4918] cursor-pointer transition-colors">
+                                <input type="radio" name="tone" value="formal" class="sr-only">
+                                <div class="w-4 h-4 border-2 border-[#718096] rounded-full mr-3 flex-shrink-0"></div>
+                                <div>
+                                    <div class="font-medium text-white">Формальный</div>
+                                    <div class="text-sm text-[#A0AEC0]">Деловой, профессиональный стиль</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center p-3 rounded-lg border-2 border-transparent hover:border-[#DC4918] cursor-pointer transition-colors">
+                                <input type="radio" name="tone" value="friendly" class="sr-only">
+                                <div class="w-4 h-4 border-2 border-[#718096] rounded-full mr-3 flex-shrink-0"></div>
+                                <div>
+                                    <div class="font-medium text-white">Дружелюбный</div>
+                                    <div class="text-sm text-[#A0AEC0]">Теплый, приветливый тон</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center p-3 rounded-lg border-2 border-transparent hover:border-[#DC4918] cursor-pointer transition-colors">
+                                <input type="radio" name="tone" value="casual" class="sr-only">
+                                <div class="w-4 h-4 border-2 border-[#718096] rounded-full mr-3 flex-shrink-0"></div>
+                                <div>
+                                    <div class="font-medium text-white">Неформальный</div>
+                                    <div class="text-sm text-[#A0AEC0]">Расслабленный, разговорный</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Humor Level -->
+                    <div class="bg-[#1E2328] rounded-lg p-4">
+                        <label class="block text-lg font-medium text-white mb-3">Уровень юмора</label>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[#A0AEC0]">Без юмора</span>
+                                <span class="text-[#A0AEC0]">Много юмора</span>
+                            </div>
+                            <input type="range" name="humor" min="0" max="5" value="2" 
+                                   class="w-full h-2 bg-[#2D3446] rounded-lg appearance-none cursor-pointer slider">
+                            <div class="flex justify-between text-xs text-[#718096]">
+                                <span>0</span>
+                                <span>1</span>
+                                <span>2</span>
+                                <span>3</span>
+                                <span>4</span>
+                                <span>5</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Brevity Level -->
+                    <div class="bg-[#1E2328] rounded-lg p-4">
+                        <label class="block text-lg font-medium text-white mb-3">Уровень краткости</label>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[#A0AEC0]">Подробно</span>
+                                <span class="text-[#A0AEC0]">Кратко</span>
+                            </div>
+                            <input type="range" name="brevity" min="0" max="5" value="2" 
+                                   class="w-full h-2 bg-[#2D3446] rounded-lg appearance-none cursor-pointer slider">
+                            <div class="flex justify-between text-xs text-[#718096]">
+                                <span>0</span>
+                                <span>1</span>
+                                <span>2</span>
+                                <span>3</span>
+                                <span>4</span>
+                                <span>5</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Prompt -->
+                    <div class="bg-[#1E2328] rounded-lg p-4">
+                        <label for="additional-prompt" class="block text-lg font-medium text-white mb-3">
+                            Дополнительный промпт
+                        </label>
+                        <textarea id="additional-prompt" name="additional_prompt" rows="4" 
+                                  class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918] resize-none"
+                                  placeholder="Введите дополнительные инструкции для чат-бота (например, специализация, стиль ответов, ограничения)..."></textarea>
+                        <p class="text-sm text-[#A0AEC0] mt-2">
+                            Эти инструкции будут добавлены к каждому запросу для настройки поведения бота
+                        </p>
+                    </div>
+
+                    <!-- Save Button -->
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn-primary px-8 py-3">
+                            Сохранить настройки
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Success/Error Messages -->
+                <div id="message" class="mt-4 p-4 rounded-lg hidden">
+                    <div id="message-content"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+</body>
+</html> 

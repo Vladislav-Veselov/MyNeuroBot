@@ -1,0 +1,162 @@
+/* Chatbot specific styles */
+.chat-container {
+    height: calc(100vh - 4rem); /* Subtract navigation height */
+}
+
+/* Message animations */
+.message-enter {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: messageSlideIn 0.3s ease-out forwards;
+}
+
+@keyframes messageSlideIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #A0AEC0;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Scrollbar for chat messages */
+#chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+#chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+    background: #2D3446;
+    border-radius: 3px;
+}
+
+#chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #DC4918;
+}
+
+/* Message bubble styles */
+.message-bubble {
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+/* User message styling */
+.user-message {
+    background: #DC4918;
+    color: white;
+}
+
+/* Bot message styling */
+.bot-message {
+    background: #2D3446;
+    color: white;
+    border: 1px solid #3D4456;
+}
+
+/* Input focus effects */
+#chat-input:focus {
+    box-shadow: 0 0 0 3px rgba(220, 73, 24, 0.1);
+}
+
+/* Send button hover effect */
+#send-button:hover {
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .chat-container {
+        height: calc(100vh - 3rem);
+    }
+    
+    .message-bubble {
+        max-width: 85%;
+    }
+}
+
+/* Loading state for send button */
+#send-button.loading {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: translateY(-50%) rotate(0deg);
+    }
+    to {
+        transform: translateY(-50%) rotate(360deg);
+    }
+}
+
+/* Disabled state */
+#chat-input:disabled,
+#send-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Timestamp styling */
+.message-timestamp {
+    font-size: 0.75rem;
+    color: #718096;
+    margin-top: 0.25rem;
+}
+
+/* Avatar styling */
+.message-avatar {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.user-avatar {
+    background: linear-gradient(135deg, #DC4918, #FF6B35);
+    color: white;
+}
+
+.bot-avatar {
+    background: #DC4918;
+    color: white;
+} 

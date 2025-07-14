@@ -1,0 +1,6 @@
+{
+  "tone": "friendly",
+  "humor": 2,
+  "brevity": 3,
+  "additional_prompt": ""
+}
