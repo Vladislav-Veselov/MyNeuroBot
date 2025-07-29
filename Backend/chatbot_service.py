@@ -9,7 +9,9 @@ from vectorize import rebuild_vector_store
 import faiss
 import numpy as np
 from langchain_openai import OpenAIEmbeddings
-from dialogue_storage import dialogue_storage
+from dialogue_storage import get_dialogue_storage
+from session_manager import ip_session_manager
+from data_masking import data_masker
 
 # Load environment variables
 load_dotenv(override=True)
@@ -21,11 +23,7 @@ os.environ["OPENAI_API_KEY"] = api_key
 
 
 # Configuration
-KNOWLEDGE_FILE = Path(r"C:\PARTNERS\NeuroBot\Backend\knowledge.txt")
-SYSTEM_PROMPT_FILE = Path(r"C:\PARTNERS\NeuroBot\Backend\system_prompt.txt")
-VECTOR_STORE_DIR = Path(r"C:\PARTNERS\NeuroBot\Backend\vector_KB")
-INDEX_FILE = VECTOR_STORE_DIR / "index.faiss"
-DOCSTORE_FILE = VECTOR_STORE_DIR / "docstore.json"
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -34,25 +32,40 @@ class ChatbotService:
     def __init__(self):
         self.embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
         self.conversation_history = []
-        self.current_session_id = None
         
     def get_settings(self) -> Dict[str, Any]:
-        """Get chatbot settings from file."""
+        """Get chatbot settings from file for current KB."""
         try:
-            if not SYSTEM_PROMPT_FILE.exists():
+            from auth import get_current_user_data_dir
+            from app import get_current_kb_id
+            user_data_dir = get_current_user_data_dir()
+            current_kb_id = get_current_kb_id()
+            
+            # Use current KB's settings file
+            kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
+            system_prompt_file = kb_dir / "system_prompt.txt"
+            
+            if not system_prompt_file.exists():
                 return {
-                    'tone': 'friendly',
+                    'tone': 2,
                     'humor': 2,
                     'brevity': 2,
                     'additional_prompt': ''
                 }
             
-            with open(SYSTEM_PROMPT_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            with open(system_prompt_file, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+                
+            # Handle legacy settings (convert string tone to numeric)
+            if isinstance(settings.get('tone'), str):
+                tone_mapping = {'formal': 0, 'friendly': 2, 'casual': 4}
+                settings['tone'] = tone_mapping.get(settings['tone'], 2)
+                
+            return settings
         except Exception as e:
             print(f"Error loading settings: {str(e)}")
             return {
-                'tone': 'friendly',
+                'tone': 2,
                 'humor': 2,
                 'brevity': 2,
                 'additional_prompt': ''
@@ -60,12 +73,22 @@ class ChatbotService:
     
     def get_vector_store(self):
         """Initialize and return the vector store components."""
-        if not INDEX_FILE.exists() or not DOCSTORE_FILE.exists():
-            return None, None
-        
         try:
-            index = faiss.read_index(str(INDEX_FILE))
-            with open(DOCSTORE_FILE, 'r', encoding='utf-8') as f:
+            from auth import get_current_user_data_dir
+            from app import get_current_kb_id
+            user_data_dir = get_current_user_data_dir()
+            current_kb_id = get_current_kb_id()
+            
+            # Use current KB's vector store
+            kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
+            index_file = kb_dir / "vector_KB" / "index.faiss"
+            docstore_file = kb_dir / "vector_KB" / "docstore.json"
+            
+            if not index_file.exists() or not docstore_file.exists():
+                return None, None
+            
+            index = faiss.read_index(str(index_file))
+            with open(docstore_file, 'r', encoding='utf-8') as f:
                 docstore = json.load(f)
             return index, docstore
         except Exception as e:
@@ -74,11 +97,24 @@ class ChatbotService:
     
     def parse_knowledge_file(self) -> List[Dict[str, Any]]:
         """Parse the knowledge.txt file into a list of Q&A pairs."""
-        if not KNOWLEDGE_FILE.exists():
+        try:
+            from auth import get_current_user_data_dir
+            from app import get_current_kb_id
+            user_data_dir = get_current_user_data_dir()
+            current_kb_id = get_current_kb_id()
+            
+            # Use current KB's knowledge file
+            kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
+            knowledge_file = kb_dir / "knowledge.txt"
+            
+            if not knowledge_file.exists():
+                return []
+            
+            with open(knowledge_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except Exception as e:
+            print(f"Error parsing knowledge file: {str(e)}")
             return []
-        
-        with open(KNOWLEDGE_FILE, 'r', encoding='utf-8') as f:
-            content = f.read()
         
         qa_pairs = []
         blocks = content.split('\n\n')
@@ -114,7 +150,7 @@ class ChatbotService:
         
         return qa_pairs
     
-    def search_knowledge_base(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
+    def search_knowledge_base(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """Search the knowledge base for relevant information."""
         try:
             # Load vector store
@@ -149,42 +185,62 @@ class ChatbotService:
     
     def build_system_prompt(self, settings: Dict[str, Any]) -> str:
         """Build the system prompt based on settings."""
-        tone = settings.get('tone', 'friendly')
+        tone = settings.get('tone', 2)
         humor = settings.get('humor', 2)
         brevity = settings.get('brevity', 2)
         additional_prompt = settings.get('additional_prompt', '')
         
-        # Tone mapping
+        # Get current KB info
+        try:
+            from auth import get_current_user_data_dir
+            from app import get_current_kb_id
+            user_data_dir = get_current_user_data_dir()
+            current_kb_id = get_current_kb_id()
+            
+            kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
+            kb_info_file = kb_dir / "kb_info.json"
+            kb_name = current_kb_id
+            if kb_info_file.exists():
+                with open(kb_info_file, 'r', encoding='utf-8') as f:
+                    kb_info = json.load(f)
+                    kb_name = kb_info.get('name', current_kb_id)
+        except Exception as e:
+            print(f"Error getting current KB info: {str(e)}")
+            kb_name = "default"
+        
+        # Tone mapping (0-4 scale)
         tone_instructions = {
-            'friendly': 'Отвечай дружелюбно и тепло',
-            'formal': 'Отвечай официально и профессионально',
-            'casual': 'Отвечай неформально и расслабленно',
-            'professional': 'Отвечай профессионально и компетентно'
+            0: 'Отвечай максимально формально и официально',
+            1: 'Отвечай официально и профессионально',
+            2: 'Отвечай дружелюбно и тепло',
+            3: 'Отвечай неформально и расслабленно',
+            4: 'Отвечай максимально неформально и разговорно'
         }
         
-        # Humor level mapping
+        # Humor level mapping (0-4 scale)
         humor_instructions = {
-            0: 'Не используй юмор',
-            1: 'Используй минимальный юмор',
+            0: 'Не используй юмор вообще',
+            1: 'Используй совсем небольшой юмор',
             2: 'Используй умеренный юмор',
-            3: 'Используй юмор по ситуации',
-            4: 'Используй юмор активно',
-            5: 'Используй юмор ОЧЕНЬ активно'
+            3: 'Используй юмор, когда это уместно по ситуации',
+            4: 'Используй юмор активно'
         }
         
-        # Brevity level mapping
+        # Brevity level mapping (0-4 scale)
         brevity_instructions = {
-            0: 'Отвечай ОЧЕНЬ подробно',
+            0: 'Отвечай МАКСИМАЛЬНО подробно',
             1: 'Отвечай подробно',
             2: 'Отвечай умеренно',
             3: 'Отвечай кратко',
-            4: 'Отвечай очень кратко',
-            5: 'Отвечай МАКСИМАЛЬНО кратко'
+            4: 'Отвечай МАКСИМАЛЬНО кратко'
         }
         
         base_prompt = f"""# ROLE: NeuroBot Assistant
 
 Ты - умный помощник, который отвечает на вопросы пользователей на основе предоставленной базы знаний.
+
+## CURRENT KNOWLEDGE BASE
+Текущая база знаний: "{kb_name}"
 
 ## PERSONALITY SETTINGS
 - Тон общения: {tone_instructions.get(tone, 'Отвечай дружелюбно')}
@@ -195,8 +251,6 @@ class ChatbotService:
 1. Отвечай ТОЛЬКО на основе предоставленной информации из базы знаний
 2. Если в базе знаний нет информации по вопросу, честно скажи об этом
 3. Не выдумывай информацию
-4. Отвечай на русском языке
-5. Будь полезным и информативным
 
 ## ADDITIONAL INSTRUCTIONS
 {additional_prompt if additional_prompt else 'Нет дополнительных инструкций'}
@@ -209,23 +263,66 @@ class ChatbotService:
     def generate_response(self, user_message: str, session_id: Optional[str] = None) -> str:
         """Generate a response using OpenAI GPT with RAG."""
         try:
-            # Check if OpenAI API key is configured
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key or api_key == "your-openai-api-key-here":
                 return "⚠️ OpenAI API ключ не настроен. Пожалуйста, добавьте ваш API ключ в файл .env в папке Backend. Получить ключ можно на https://platform.openai.com/api-keys"
-            
-            # Handle session management
+
+            dialogue_storage = get_dialogue_storage()
+            client_ip = ip_session_manager.get_client_ip()
+
+            # Enforce 1 session per IP: always check storage for existing session for this IP
+            existing_session = dialogue_storage.get_session_by_ip(client_ip)
             if session_id:
-                self.current_session_id = session_id
-            elif not self.current_session_id:
-                # Create new session if none exists
-                self.current_session_id = dialogue_storage.create_session()
-            
+                # If a session_id is provided, use it (but only if it matches the IP session)
+                if existing_session and existing_session['session_id'] == session_id:
+                    self.set_current_session_id(session_id)
+                else:
+                    # Provided session_id does not match the IP session, use the IP session
+                    if existing_session:
+                        self.set_current_session_id(existing_session['session_id'])
+                    else:
+                        # No session for this IP, create one with KB info
+                        kb_id, kb_name = self.get_current_kb_info()
+                        new_session_id = dialogue_storage.create_session(
+                            ip_address=client_ip,
+                            kb_id=kb_id,
+                            kb_name=kb_name
+                        )
+                        self.set_current_session_id(new_session_id)
+            else:
+                # No session_id provided
+                if existing_session:
+                    self.set_current_session_id(existing_session['session_id'])
+                else:
+                    # No session for this IP, create one with KB info
+                    kb_id, kb_name = self.get_current_kb_info()
+                    new_session_id = dialogue_storage.create_session(
+                        ip_address=client_ip,
+                        kb_id=kb_id,
+                        kb_name=kb_name
+                    )
+                    self.set_current_session_id(new_session_id)
+
             # Get settings
             settings = self.get_settings()
             
-            # Search knowledge base
-            relevant_docs = self.search_knowledge_base(user_message)
+            # Mask personal information in user message before sending to OpenAI
+            masked_user_message, mask_info = data_masker.mask_all_personal_data(user_message)
+            
+            # Log masking information if any personal data was found
+            if mask_info.get('total_masked', 0) > 0:
+                print(f"\n🔒 PERSONAL DATA MASKED:")
+                print(f"   Emails: {len(mask_info.get('emails', []))}")
+                print(f"   Phones: {len(mask_info.get('phones', []))}")
+                print(f"   Credit Cards: {len(mask_info.get('credit_cards', []))}")
+                print(f"   Passports: {len(mask_info.get('passports', []))}")
+                print(f"   SSNs: {len(mask_info.get('ssns', []))}")
+                print(f"   Total masked items: {mask_info.get('total_masked', 0)}")
+                print(f"   Original message: {user_message}")
+                print(f"   Masked message: {masked_user_message}")
+            
+            # Search knowledge base using masked message
+            relevant_docs = self.search_knowledge_base(masked_user_message)
             
             # Build context from relevant documents
             context = ""
@@ -249,24 +346,33 @@ class ChatbotService:
                 {"role": "system", "content": full_system_prompt}
             ]
             
-            # Add conversation history (last 10 messages to avoid token limits)
-            for msg in self.conversation_history[-10:]:
-                messages.append(msg)
+            # Get conversation history from dialogue storage (last 10 messages)
+            conversation_history = []
+            if self.get_current_session_id():
+                session_data = dialogue_storage.get_session(self.get_current_session_id())
+                if session_data and session_data.get('messages'):
+                    # Get last 10 messages from the session
+                    last_messages = session_data['messages'][-10:]
+                    conversation_history = [
+                        {"role": msg['role'], "content": msg['content']} 
+                        for msg in last_messages
+                    ]
             
-            # Add current user message
-            messages.append({"role": "user", "content": user_message})
+            # Mask personal information in conversation history before sending to OpenAI
+            masked_history = data_masker.mask_conversation_history(conversation_history)
+            messages.extend(masked_history)
+            
+            # Add current user message (masked version for OpenAI)
+            messages.append({"role": "user", "content": masked_user_message})
             
             # Print the complete information sent to OpenAI
-            print("\n" + "="*100)
-            print("COMPLETE INFORMATION SENT TO OPENAI")
-            print("="*100)
+            print("================================================")
+            print("COMPLETE INFORMATION SENT TO OPENAI:")
             for i, msg in enumerate(messages):
                 print(f"\n--- MESSAGE {i+1} ({msg['role'].upper()}) ---")
                 print(f"Content:\n{msg['content']}")
                 print("-" * 100)
-            print("\n" + "="*100)
-            print("END COMPLETE INFORMATION")
-            print("="*100 + "\n")
+            print("================================================")
             
             # Call OpenAI API
             response = client.chat.completions.create(
@@ -276,18 +382,19 @@ class ChatbotService:
             
             bot_response = response.choices[0].message.content.strip()
             
-            # Update conversation history
+            # Update conversation history with original (unmasked) user message
             self.conversation_history.append({"role": "user", "content": user_message})
             self.conversation_history.append({"role": "assistant", "content": bot_response})
             
-            # Keep only last 20 messages to manage memory
+            # Keep only last 20 messages to manage memory (for backward compatibility)
             if len(self.conversation_history) > 20:
                 self.conversation_history = self.conversation_history[-20:]
             
-            # Save messages to dialogue storage
-            if self.current_session_id:
-                dialogue_storage.add_message(self.current_session_id, "user", user_message)
-                dialogue_storage.add_message(self.current_session_id, "assistant", bot_response)
+            # Save messages to dialogue storage (original unmasked message)
+            if self.get_current_session_id():
+                dialogue_storage = get_dialogue_storage()
+                dialogue_storage.add_message(self.get_current_session_id(), "user", user_message)
+                dialogue_storage.add_message(self.get_current_session_id(), "assistant", bot_response)
             
             return bot_response
             
@@ -306,17 +413,59 @@ class ChatbotService:
     def clear_history(self):
         """Clear conversation history."""
         self.conversation_history = []
-        self.current_session_id = None
+        # Start a new session to clear the dialogue storage history
+        self.start_new_session()
+    
+    def reset_session(self):
+        """Reset the current session ID to force creation of a new session."""
+        self.clear_current_session()
     
     def start_new_session(self) -> str:
         """Start a new dialogue session."""
         self.conversation_history = []
-        self.current_session_id = dialogue_storage.create_session()
-        return self.current_session_id
+        dialogue_storage = get_dialogue_storage()
+        client_ip = ip_session_manager.get_client_ip()
+        kb_id, kb_name = self.get_current_kb_info()
+        new_session_id = dialogue_storage.create_session(
+            ip_address=client_ip,
+            kb_id=kb_id,
+            kb_name=kb_name
+        )
+        self.set_current_session_id(new_session_id)
+        return self.get_current_session_id()
     
     def get_current_session_id(self) -> Optional[str]:
-        """Get the current session ID."""
-        return self.current_session_id
+        """Get the current session ID for the requesting IP."""
+        return ip_session_manager.get_current_ip_session_id()
+    
+    def set_current_session_id(self, session_id: str) -> None:
+        """Set the current session ID for the requesting IP."""
+        ip_session_manager.set_current_ip_session_id(session_id)
+    
+    def clear_current_session(self) -> None:
+        """Clear the current session for the requesting IP."""
+        ip_session_manager.clear_current_ip_session()
+    
+    def get_current_kb_info(self) -> tuple[str, str]:
+        """Get current KB ID and name."""
+        try:
+            from auth import get_current_user_data_dir
+            from app import get_current_kb_id
+            user_data_dir = get_current_user_data_dir()
+            current_kb_id = get_current_kb_id()
+            
+            kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
+            kb_info_file = kb_dir / "kb_info.json"
+            kb_name = current_kb_id
+            if kb_info_file.exists():
+                with open(kb_info_file, 'r', encoding='utf-8') as f:
+                    kb_info = json.load(f)
+                    kb_name = kb_info.get('name', current_kb_id)
+            
+            return current_kb_id, kb_name
+        except Exception as e:
+            print(f"Error getting current KB info: {str(e)}")
+            return "default", "База знаний по умолчанию"
 
 # Global instance
 chatbot_service = ChatbotService() 

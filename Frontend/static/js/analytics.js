@@ -60,6 +60,15 @@ class AnalyticsManager {
                 this.togglePotentialClient(e.target.dataset.sessionId, e.target.dataset.currentStatus === 'true');
             }
         });
+
+        // Download session button (delegated event)
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('download-session-btn') || e.target.closest('.download-session-btn')) {
+                e.stopPropagation(); // Prevent session card click
+                const button = e.target.classList.contains('download-session-btn') ? e.target : e.target.closest('.download-session-btn');
+                this.downloadSession(button.dataset.sessionId);
+            }
+        });
     }
 
     async analyzeUnreadSessions() {
@@ -224,6 +233,8 @@ class AnalyticsManager {
         const preview = session.first_message || 'Нет сообщений';
         const isUnread = session.unread || false;
         const isPotentialClient = session.potential_client === true;
+        const ipAddress = session.ip_address || 'Неизвестно';
+        const kbName = session.kb_name || session.kb_id || 'База знаний по умолчанию';
         
         // Add CSS classes for styling
         let cardClasses = 'session-card';
@@ -244,17 +255,34 @@ class AnalyticsManager {
                     <div class="session-preview">${this.escapeHtml(preview)}</div>
                 </div>
                 <div class="session-meta">
+                    <div class="session-kb">
+                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                        ${kbName}
+                    </div>
                     <div class="session-messages">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                         </svg>
                         ${session.total_messages} сообщений
                     </div>
-                    <div>Обновлено: ${lastUpdated}</div>
+                    <div class="session-ip">
+                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        ${ipAddress}
+                    </div>
                 </div>
                 <div class="session-actions">
                     <button class="toggle-potential-client-btn" data-session-id="${session.session_id}" data-current-status="${isPotentialClient}">
                         ${isPotentialClient ? 'Убрать клиента' : 'Отметить клиентом'}
+                    </button>
+                    <button class="download-session-btn" data-session-id="${session.session_id}">
+                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Скачать
                     </button>
                 </div>
             </div>
@@ -498,6 +526,24 @@ class AnalyticsManager {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    async downloadSession(sessionId) {
+        try {
+            // Create a temporary link element to trigger the download
+            const link = document.createElement('a');
+            link.href = `/api/dialogues/${sessionId}/download`;
+            link.download = `dialogue_${sessionId.substring(0, 8)}.txt`;
+            link.style.display = 'none';
+            
+            // Add the link to the document, click it, and remove it
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error downloading session:', error);
+            alert('Ошибка при скачивании диалога');
+        }
     }
 }
 

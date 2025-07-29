@@ -52,10 +52,15 @@ class DialogueStorage:
         except Exception as e:
             print(f"Error saving sessions: {str(e)}")
     
-    def create_session(self) -> str:
+    def create_session(self, ip_address: str = None, kb_id: str = None, kb_name: str = None) -> str:
         """
         Create a new dialogue session.
         
+        Args:
+            ip_address: IP address of the client (optional)
+            kb_id: Knowledge base ID (optional)
+            kb_name: Knowledge base name (optional)
+            
         Returns:
             Session ID (UUID string)
         """
@@ -68,7 +73,10 @@ class DialogueStorage:
                 "total_messages": 0,
                 "last_updated": datetime.now().isoformat(),
                 "unread": True,
-                "potential_client": None
+                "potential_client": None,
+                "ip_address": ip_address,
+                "kb_id": kb_id,
+                "kb_name": kb_name
             }
         }
         
@@ -168,7 +176,10 @@ class DialogueStorage:
                     "last_updated": session_data["metadata"]["last_updated"],
                     "first_message": session_data["messages"][0]["content"][:100] + "..." if session_data["messages"] else "No messages",
                     "unread": session_data["metadata"].get("unread", False),
-                    "potential_client": session_data["metadata"].get("potential_client", None)
+                    "potential_client": session_data["metadata"].get("potential_client", None),
+                    "ip_address": session_data["metadata"].get("ip_address", None),
+                    "kb_id": session_data["metadata"].get("kb_id", None),
+                    "kb_name": session_data["metadata"].get("kb_name", None)
                 }
                 sessions.append(summary)
             
@@ -223,6 +234,10 @@ class DialogueStorage:
                 "sessions": {}
             }
             self._save_all_sessions(all_data)
+            
+            # Reset global instance to ensure fresh loading
+            reset_dialogue_storage()
+            
             return True
         except Exception as e:
             print(f"Error clearing all sessions: {str(e)}")
@@ -312,5 +327,71 @@ class DialogueStorage:
             print(f"Error marking session {session_id} as potential client: {str(e)}")
             return False
 
-# Global instance
-dialogue_storage = DialogueStorage(os.path.join(os.path.dirname(__file__), "dialogues.json")) 
+    def get_session_by_ip(self, ip_address: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the most recent session for a given IP address.
+        
+        Args:
+            ip_address: IP address to search for
+            
+        Returns:
+            Session data or None if not found
+        """
+        try:
+            all_data = self._load_all_sessions()
+            
+            # Find sessions with matching IP address
+            matching_sessions = []
+            for session_id, session_data in all_data["sessions"].items():
+                if session_data["metadata"].get("ip_address") == ip_address:
+                    matching_sessions.append((session_id, session_data))
+            
+            if not matching_sessions:
+                return None
+            
+            # Return the most recent session (by last_updated)
+            matching_sessions.sort(
+                key=lambda x: x[1]["metadata"]["last_updated"], 
+                reverse=True
+            )
+            return matching_sessions[0][1]
+            
+        except Exception as e:
+            print(f"Error getting session by IP {ip_address}: {str(e)}")
+            return None
+
+# Global instance - will be initialized per user
+dialogue_storage = None
+current_user = None
+
+def reset_dialogue_storage():
+    """Reset the global dialogue storage instance."""
+    global dialogue_storage, current_user
+    dialogue_storage = None
+    current_user = None
+
+def get_dialogue_storage():
+    """Get the dialogue storage instance for the current user."""
+    global dialogue_storage, current_user
+    
+    try:
+        from auth import get_current_user_data_dir
+        user_data_dir = get_current_user_data_dir()
+        current_username = user_data_dir.name  # Get username from directory name
+        
+        # Reset global instance if user changed
+        if current_user != current_username:
+            dialogue_storage = None
+            current_user = current_username
+        
+        if dialogue_storage is None:
+            dialogues_file = user_data_dir / "dialogues.json"
+            dialogue_storage = DialogueStorage(str(dialogues_file))
+            
+    except Exception as e:
+        print(f"Error initializing dialogue storage: {str(e)}")
+        # Fallback to admin directory
+        admin_file = os.path.join(os.path.dirname(__file__), "..", "user_data", "admin", "dialogues.json")
+        dialogue_storage = DialogueStorage(admin_file)
+    
+    return dialogue_storage 

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-[#1A1E27]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация - NeuroBot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1A1E27 !important;
+            min-height: 100vh;
+        }
+        
+        html {
+            background-color: #1A1E27 !important;
+        }
+        
+        .auth-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 2rem;
+            background: #242A36;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border: 1px solid #2D3446;
+        }
+        
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .auth-header h1 {
+            color: #DC4918;
+            margin-bottom: 0.5rem;
+            font-size: 1.875rem;
+            font-weight: bold;
+        }
+        
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .form-group label {
+            font-weight: 500;
+            color: #A0AEC0;
+            font-size: 0.875rem;
+        }
+        
+        .form-group input {
+            padding: 0.75rem;
+            border: 1px solid #2D3446;
+            border-radius: 5px;
+            background: #1E2328;
+            color: #FFFFFF;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #DC4918;
+            box-shadow: 0 0 0 2px rgba(220, 73, 24, 0.1);
+        }
+        
+        .auth-button {
+            background: #DC4918;
+            color: white;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .auth-button:hover {
+            background: #FF6B35;
+        }
+        
+        .auth-links {
+            text-align: center;
+            margin-top: 1rem;
+        }
+        
+        .auth-links a {
+            color: #DC4918;
+            text-decoration: none;
+        }
+        
+        .auth-links a:hover {
+            color: #FF6B35;
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            background: #2D1B1B;
+            color: #F56565;
+            padding: 0.75rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            display: none;
+            border: 1px solid #4A1C1C;
+        }
+        
+        .success-message {
+            background: #1B2D1B;
+            color: #68D391;
+            padding: 0.75rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            display: none;
+            border: 1px solid #2D4A2D;
+        }
+        
+        .requirements {
+            font-size: 0.875rem;
+            color: #718096;
+            margin-top: 0.25rem;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        
+        .logo-container img {
+            height: 48px;
+            width: auto;
+        }
+        
+        .logo-text {
+            font-size: 1.875rem;
+            font-weight: bold;
+            color: #DC4918;
+            margin-left: 0.75rem;
+        }
+    </style>
+</head>
+<body class="h-full bg-[#1A1E27] text-white">
+    <div class="min-h-full flex items-center justify-center px-4">
+        <div class="auth-container">
+            <div class="auth-header">
+                <div class="logo-container">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="NeuroBot Logo">
+                    <span class="logo-text">NeuroBot</span>
+                </div>
+                <p class="text-[#A0AEC0]">Создайте свой аккаунт</p>
+            </div>
+            
+            <div id="error-message" class="error-message"></div>
+            <div id="success-message" class="success-message"></div>
+            
+            <form class="auth-form" id="signup-form">
+                <div class="form-group">
+                    <label for="username">Имя пользователя</label>
+                    <input type="text" id="username" name="username" required>
+                    <div class="requirements">Минимум 3 символа</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email (необязательно)</label>
+                    <input type="email" id="email" name="email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    <input type="password" id="password" name="password" required>
+                    <div class="requirements">Минимум 6 символов</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm-password">Подтвердите пароль</label>
+                    <input type="password" id="confirm-password" name="confirm-password" required>
+                </div>
+                
+                <button type="submit" class="auth-button">Создать аккаунт</button>
+            </form>
+            
+            <div class="auth-links">
+                <p class="text-[#A0AEC0]">Уже есть аккаунт? <a href="/login">Войти</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('signup-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            // Basic validation
+            if (password !== confirmPassword) {
+                showMessage('error', 'Пароли не совпадают');
+                return;
+            }
+            
+            if (username.length < 3) {
+                showMessage('error', 'Имя пользователя должно содержать минимум 3 символа');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showMessage('error', 'Пароль должен содержать минимум 6 символов');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password, email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('success', 'Аккаунт создан успешно! Перенаправление на страницу входа...');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    showMessage('error', data.error || 'Ошибка регистрации');
+                }
+            } catch (error) {
+                showMessage('error', 'Произошла ошибка. Попробуйте еще раз.');
+            }
+        });
+        
+        function showMessage(type, message) {
+            const errorDiv = document.getElementById('error-message');
+            const successDiv = document.getElementById('success-message');
+            
+            if (type === 'error') {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                successDiv.style.display = 'none';
+            } else {
+                successDiv.textContent = message;
+                successDiv.style.display = 'block';
+                errorDiv.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -1,3 +1,73 @@
+/* Modal solid background styles */
+#create-kb-modal > div,
+#kb-details-modal > div,
+#change-kb-password-modal > div {
+    background-color: #242A36 !important;
+    backdrop-filter: none !important;
+}
+
+#create-kb-modal .p-6,
+#kb-details-modal .p-6,
+#change-kb-password-modal .p-6 {
+    background-color: #242A36 !important;
+}
+
+#create-kb-form,
+#kb-details-content,
+#change-kb-password-form {
+    background-color: #242A36 !important;
+}
+
+/* KB Selector specific styles */
+#kb-selector,
+#settings-kb-selector {
+    color: #FFFFFF !important;
+    background-color: #242A36 !important;
+    border: 1px solid #2D3446 !important;
+    min-width: 200px !important;
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+#kb-selector option,
+#settings-kb-selector option {
+    color: #FFFFFF !important;
+    background-color: #242A36 !important;
+    padding: 8px 12px !important;
+}
+
+#kb-selector:focus,
+#settings-kb-selector:focus {
+    outline: none !important;
+    border-color: #DC4918 !important;
+    box-shadow: 0 0 0 2px rgba(220, 73, 24, 0.2) !important;
+}
+
+/* Ensure the selector is visible even when empty */
+#kb-selector:empty::before,
+#settings-kb-selector:empty::before {
+    content: "Загрузка...";
+    color: #A0AEC0;
+    font-style: italic;
+}
+
+/* Additional styles for settings page KB selector */
+#settings-kb-selector {
+    background-color: #242A36 !important;
+    color: #FFFFFF !important;
+    border: 1px solid #2D3446 !important;
+}
+
+#settings-kb-selector:focus {
+    border-color: #DC4918 !important;
+    box-shadow: 0 0 0 2px rgba(220, 73, 24, 0.2) !important;
+}
+
 /* Base dark theme styles */
 :root {
     --dark-bg: #1A1E27;
@@ -8,6 +78,50 @@
     --text-primary: #FFFFFF;
     --text-secondary: #A0AEC0;
     --text-muted: #718096;
+}
+
+/* Toggle dot styles */
+.toggle-dot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--dark-border);
+    border-radius: 8px;
+    background-color: var(--dark-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.toggle-dot:hover {
+    border-color: var(--accent-orange);
+    background-color: var(--dark-hover);
+    color: var(--text-primary);
+}
+
+.toggle-dot.active {
+    border-color: var(--accent-orange);
+    background-color: var(--accent-orange);
+    color: var(--text-primary);
+}
+
+.toggle-dot .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--text-secondary);
+    transition: all 0.2s ease-in-out;
+}
+
+.toggle-dot.active .dot {
+    background-color: var(--text-primary);
+}
+
+.toggle-dot .label {
+    font-weight: 500;
 }
 
 body {

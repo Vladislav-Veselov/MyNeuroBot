@@ -22,7 +22,7 @@ load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 
-VECTOR_DIR = Path(r"C:\PARTNERS\NeuroBot\Backend\vector_KB")  # <- your index
+VECTOR_DIR = Path(r"C:\PARTNERS\NeuroBot\user_data\admin\vector_KB")  # <- your index
 EMBED_MODEL = "text-embedding-3-large"
 TOP_K = 5                         # how many results to show
 

@@ -68,6 +68,23 @@
     align-items: center;
     font-size: 0.75rem;
     color: #718096;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.session-kb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #DC4918;
+    font-weight: 500;
+    font-size: 0.7rem;
+}
+
+.session-kb svg {
+    width: 12px;
+    height: 12px;
+    color: #DC4918;
 }
 
 .session-messages {
@@ -79,6 +96,21 @@
 .session-messages svg {
     width: 14px;
     height: 14px;
+}
+
+.session-ip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #A0AEC0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+}
+
+.session-ip svg {
+    width: 12px;
+    height: 12px;
+    color: #718096;
 }
 
 /* Modal styles */
@@ -503,4 +535,31 @@
 
 .session-card.potential-client .toggle-potential-client-btn:hover {
     background: #F87171;
+}
+
+.download-session-btn {
+    background: #2D3446;
+    color: #A0AEC0;
+    border: 1px solid #3D4456;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+}
+
+.download-session-btn:hover {
+    background: #3D4456;
+    color: white;
+    border-color: #DC4918;
+    transform: translateY(-1px);
+}
+
+.download-session-btn svg {
+    width: 14px;
+    height: 14px;
 } 

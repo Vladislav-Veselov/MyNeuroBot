@@ -28,7 +28,7 @@
                             <a href="/analytics" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
                                 Аналитика
                             </a>
-                            <a href="/settings" class="text-[#DC4918] hover:text-[#FF6B35] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                            <a href="/settings" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
                                 Настройки
                             </a>
                             <a href="/chatbot" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
@@ -37,6 +37,27 @@
                             <a href="/about" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
                                 О нас
                             </a>
+                        </div>
+                    </div>
+                    
+                    <!-- User Account Section -->
+                    <div class="flex items-center space-x-4">
+                        <div class="relative group">
+                            <button id="user-account-btn" class="flex items-center space-x-2 text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                                <span id="username-display">Загрузка...</span>
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <!-- Dropdown menu -->
+                            <div id="user-dropdown" class="absolute right-0 mt-2 w-48 bg-[#242A36] rounded-md shadow-lg py-1 z-50 hidden group-hover:block">
+                                <button id="logout-btn" class="block w-full text-left px-4 py-2 text-sm text-[#A0AEC0] hover:text-white hover:bg-[#2D3446] transition-colors duration-200">
+                                    Выйти
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -60,7 +81,7 @@
                     <a href="/analytics" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
                         Аналитика
                     </a>
-                    <a href="/settings" class="text-[#DC4918] hover:text-[#FF6B35] block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                    <a href="/settings" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
                         Настройки
                     </a>
                     <a href="/chatbot" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
@@ -79,37 +100,42 @@
                 <div class="mb-6">
                     <h1 class="text-3xl font-bold text-white mb-2">Настройки чат-бота</h1>
                     <p class="text-[#A0AEC0]">Настройте стиль общения и поведение вашего чат-бота</p>
+                    
+                    <!-- KB Selector -->
+                    <div class="mt-4 p-4 bg-[#1E2328] rounded-lg border border-[#2D3446]">
+                        <label class="block text-sm font-medium text-[#A0AEC0] mb-2">База знаний</label>
+                        <div class="flex items-center space-x-2">
+                            <select id="settings-kb-selector" class="px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918] min-w-[200px]">
+                                <option value="">Загрузка...</option>
+                            </select>
+                            <button id="settings-kb-details-btn" class="btn-secondary" title="Детали базы знаний">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="text-xs text-[#718096] mt-2">Выберите базу знаний для настройки. Каждая база знаний может иметь свои собственные настройки.</p>
+                    </div>
                 </div>
 
                 <form id="settings-form" class="space-y-6">
                     <!-- Tone of Communication -->
                     <div class="bg-[#1E2328] rounded-lg p-4">
                         <label class="block text-lg font-medium text-white mb-3">Тон общения</label>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <label class="flex items-center p-3 rounded-lg border-2 border-transparent hover:border-[#DC4918] cursor-pointer transition-colors">
-                                <input type="radio" name="tone" value="formal" class="sr-only">
-                                <div class="w-4 h-4 border-2 border-[#718096] rounded-full mr-3 flex-shrink-0"></div>
-                                <div>
-                                    <div class="font-medium text-white">Формальный</div>
-                                    <div class="text-sm text-[#A0AEC0]">Деловой, профессиональный стиль</div>
-                                </div>
-                            </label>
-                            <label class="flex items-center p-3 rounded-lg border-2 border-transparent hover:border-[#DC4918] cursor-pointer transition-colors">
-                                <input type="radio" name="tone" value="friendly" class="sr-only">
-                                <div class="w-4 h-4 border-2 border-[#718096] rounded-full mr-3 flex-shrink-0"></div>
-                                <div>
-                                    <div class="font-medium text-white">Дружелюбный</div>
-                                    <div class="text-sm text-[#A0AEC0]">Теплый, приветливый тон</div>
-                                </div>
-                            </label>
-                            <label class="flex items-center p-3 rounded-lg border-2 border-transparent hover:border-[#DC4918] cursor-pointer transition-colors">
-                                <input type="radio" name="tone" value="casual" class="sr-only">
-                                <div class="w-4 h-4 border-2 border-[#718096] rounded-full mr-3 flex-shrink-0"></div>
-                                <div>
-                                    <div class="font-medium text-white">Неформальный</div>
-                                    <div class="text-sm text-[#A0AEC0]">Расслабленный, разговорный</div>
-                                </div>
-                            </label>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[#A0AEC0]">Формальный</span>
+                                <span class="text-[#A0AEC0]">Неформальный</span>
+                            </div>
+                            <input type="range" name="tone" min="0" max="4" value="2" 
+                                   class="w-full h-2 bg-[#2D3446] rounded-lg appearance-none cursor-pointer slider">
+                            <div class="flex justify-between text-xs text-[#718096]">
+                                <span>0</span>
+                                <span>1</span>
+                                <span>2</span>
+                                <span>3</span>
+                                <span>4</span>
+                            </div>
                         </div>
                     </div>
 
@@ -121,7 +147,7 @@
                                 <span class="text-[#A0AEC0]">Без юмора</span>
                                 <span class="text-[#A0AEC0]">Много юмора</span>
                             </div>
-                            <input type="range" name="humor" min="0" max="5" value="2" 
+                            <input type="range" name="humor" min="0" max="4" value="2" 
                                    class="w-full h-2 bg-[#2D3446] rounded-lg appearance-none cursor-pointer slider">
                             <div class="flex justify-between text-xs text-[#718096]">
                                 <span>0</span>
@@ -129,7 +155,6 @@
                                 <span>2</span>
                                 <span>3</span>
                                 <span>4</span>
-                                <span>5</span>
                             </div>
                         </div>
                     </div>
@@ -142,7 +167,7 @@
                                 <span class="text-[#A0AEC0]">Подробно</span>
                                 <span class="text-[#A0AEC0]">Кратко</span>
                             </div>
-                            <input type="range" name="brevity" min="0" max="5" value="2" 
+                            <input type="range" name="brevity" min="0" max="4" value="2" 
                                    class="w-full h-2 bg-[#2D3446] rounded-lg appearance-none cursor-pointer slider">
                             <div class="flex justify-between text-xs text-[#718096]">
                                 <span>0</span>
@@ -150,7 +175,6 @@
                                 <span>2</span>
                                 <span>3</span>
                                 <span>4</span>
-                                <span>5</span>
                             </div>
                         </div>
                     </div>
@@ -184,6 +208,117 @@
         </main>
     </div>
 
+    <script src="{{ url_for('static', filename='js/navigation.js') }}"></script>
     <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/kb-manager.js') }}"></script>
+    
+    <!-- User Account JavaScript -->
+    <script>
+        // User account functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get username from session or display default
+            const usernameDisplay = document.getElementById('username-display');
+            const userAccountBtn = document.getElementById('user-account-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+            const userDropdown = document.getElementById('user-dropdown');
+            
+            // Try to get username from localStorage or display default
+            const savedUsername = localStorage.getItem('username');
+            if (savedUsername) {
+                usernameDisplay.textContent = savedUsername;
+            } else {
+                usernameDisplay.textContent = 'Пользователь';
+            }
+            
+            // Toggle dropdown on click
+            userAccountBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                userDropdown.classList.toggle('hidden');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!userAccountBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.add('hidden');
+                }
+            });
+            
+            // Logout functionality
+            logoutBtn.addEventListener('click', async function() {
+                try {
+                    const response = await fetch('/api/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Clear localStorage
+                        localStorage.removeItem('username');
+                        // Redirect to login page
+                        window.location.href = '/login';
+                    } else {
+                        console.error('Logout failed:', data.error);
+                        // Still redirect to login page
+                        window.location.href = '/login';
+                    }
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    // Still redirect to login page
+                    window.location.href = '/login';
+                }
+            });
+        });
+    </script>
+
+    <!-- KB Details Modal for Settings -->
+    <div id="settings-kb-details-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-md w-full mx-4" style="background-color: #242A36 !important;">
+            <div class="p-6" style="background-color: #242A36 !important;">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-white">Детали базы знаний</h3>
+                    <button id="close-settings-kb-details-modal" class="text-[#718096] hover:text-white">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="settings-kb-details-content" class="space-y-4" style="background-color: #242A36 !important;">
+                    <div>
+                        <label class="block text-sm font-medium text-[#A0AEC0] mb-1">Название</label>
+                        <p id="settings-kb-details-name" class="text-white font-medium"></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#A0AEC0] mb-1">ID базы знаний</label>
+                        <p id="settings-kb-details-id" class="text-white font-mono text-sm"></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#A0AEC0] mb-1">Дата создания</label>
+                        <p id="settings-kb-details-created" class="text-white"></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#A0AEC0] mb-1">Количество документов</label>
+                        <p id="settings-kb-details-docs" class="text-white"></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#A0AEC0] mb-1">Пароль</label>
+                        <div class="flex items-center space-x-2">
+                            <p id="settings-kb-details-password" class="text-white font-mono"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#A0AEC0] mb-1">Анализ потенциальных клиентов</label>
+                        <p id="settings-kb-details-analyze-clients" class="text-white"></p>
+                    </div>
+                </div>
+                <div class="flex justify-end mt-6">
+                    <button id="close-settings-kb-details" class="btn-outline">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html> 

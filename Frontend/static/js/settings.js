@@ -2,30 +2,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('settings-form');
     const messageDiv = document.getElementById('message');
     const messageContent = document.getElementById('message-content');
+    const kbSelector = document.getElementById('settings-kb-selector');
+    const kbDetailsBtn = document.getElementById('settings-kb-details-btn');
+    const kbDetailsModal = document.getElementById('settings-kb-details-modal');
+    const closeKbDetailsModal = document.getElementById('close-settings-kb-details-modal');
+    const closeKbDetails = document.getElementById('close-settings-kb-details');
 
-    // Load existing settings
-    loadSettings();
+    let currentKbId = null;
+    let knowledgeBases = [];
 
-    // Handle radio button styling
-    const radioButtons = document.querySelectorAll('input[type="radio"]');
-    radioButtons.forEach(radio => {
-        radio.addEventListener('change', function() {
-            // Remove selected styling from all radio buttons in the same group
-            const name = this.name;
-            document.querySelectorAll(`input[name="${name}"]`).forEach(rb => {
-                const label = rb.closest('label');
-                const circle = label.querySelector('div');
-                circle.className = 'w-4 h-4 border-2 border-[#718096] rounded-full mr-3 flex-shrink-0';
-            });
+    // Initialize settings page
+    initSettingsPage();
 
-            // Add selected styling to the checked radio button
-            if (this.checked) {
-                const label = this.closest('label');
-                const circle = label.querySelector('div');
-                circle.className = 'w-4 h-4 border-2 border-[#DC4918] rounded-full mr-3 flex-shrink-0 bg-[#DC4918]';
-            }
-        });
-    });
+    function initSettingsPage() {
+        // Set initial state
+        kbSelector.innerHTML = '<option value="">Загрузка...</option>';
+        
+        loadKnowledgeBases();
+        setupEventListeners();
+    }
 
     // Handle form submission
     form.addEventListener('submit', function(e) {
@@ -33,20 +28,25 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const formData = new FormData(form);
         const settings = {
-            tone: formData.get('tone'),
+            tone: parseInt(formData.get('tone')),
             humor: parseInt(formData.get('humor')),
             brevity: parseInt(formData.get('brevity')),
             additional_prompt: formData.get('additional_prompt')
         };
 
         // Validate tone selection
-        if (!settings.tone) {
+        if (settings.tone === null || settings.tone === undefined || isNaN(settings.tone)) {
             showMessage('Пожалуйста, выберите тон общения', 'error');
             return;
         }
 
-        // Save settings
-        fetch('/api/save_settings', {
+        // Save settings for specific KB
+        if (!currentKbId) {
+            showMessage('Пожалуйста, выберите базу знаний.', 'error');
+            return;
+        }
+
+        fetch(`/api/save_settings/${currentKbId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -67,41 +67,169 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    function loadSettings() {
-        fetch('/api/get_settings')
+    function loadKnowledgeBases() {
+        fetch('/api/knowledge-bases')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                knowledgeBases = data.knowledge_bases || []; // Ensure it's an array
+                updateKbSelector();
+                
+                // Load settings for the first KB or current KB
+                if (knowledgeBases.length > 0) {
+                    currentKbId = knowledgeBases[0].id;
+                    loadSettingsForKb(currentKbId);
+                } else {
+                    // No KBs available
+                    kbSelector.innerHTML = '<option value="">Нет баз знаний</option>';
+                }
+            } else {
+                console.error('Failed to load knowledge bases:', data.error);
+                // Show error in selector
+                kbSelector.innerHTML = '<option value="">Ошибка загрузки</option>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading knowledge bases:', error);
+            // Show error in selector
+            kbSelector.innerHTML = '<option value="">Ошибка загрузки</option>';
+        });
+    }
+
+    function updateKbSelector() {
+        kbSelector.innerHTML = '';
+        
+        if (knowledgeBases.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'Нет баз знаний';
+            kbSelector.appendChild(option);
+            return;
+        }
+
+        knowledgeBases.forEach(kb => {
+            const option = document.createElement('option');
+            option.value = kb.id;
+            option.textContent = kb.name;
+            if (kb.id === currentKbId) {
+                option.selected = true;
+            }
+            kbSelector.appendChild(option);
+        });
+    }
+
+    function setupEventListeners() {
+        // KB Selector change
+        kbSelector.addEventListener('change', (e) => {
+            const selectedKbId = e.target.value;
+            if (selectedKbId && selectedKbId !== currentKbId) {
+                currentKbId = selectedKbId;
+                loadSettingsForKb(currentKbId);
+            }
+        });
+
+        // KB Details button
+        kbDetailsBtn.addEventListener('click', () => {
+            showKbDetailsModal();
+        });
+
+        // Close KB details modal
+        closeKbDetailsModal.addEventListener('click', () => {
+            hideKbDetailsModal();
+        });
+
+        closeKbDetails.addEventListener('click', () => {
+            hideKbDetailsModal();
+        });
+
+        // Close modal when clicking outside
+        kbDetailsModal.addEventListener('click', (e) => {
+            if (e.target === kbDetailsModal) {
+                hideKbDetailsModal();
+            }
+        });
+    }
+
+    function loadSettingsForKb(kbId) {
+        if (!kbId) return;
+        
+        fetch(`/api/get_settings/${kbId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 const settings = data.settings;
                 
-                // Set tone
-                if (settings.tone) {
-                    const toneRadio = document.querySelector(`input[name="tone"][value="${settings.tone}"]`);
-                    if (toneRadio) {
-                        toneRadio.checked = true;
-                        toneRadio.dispatchEvent(new Event('change'));
-                    }
-                }
+                // Set tone (now numeric 0-4)
+                document.querySelector('input[name="tone"]').value = settings.tone !== undefined ? settings.tone : 2;
 
                 // Set humor level
-                if (settings.humor !== undefined) {
-                    document.querySelector('input[name="humor"]').value = settings.humor;
-                }
+                document.querySelector('input[name="humor"]').value = settings.humor !== undefined ? settings.humor : 2;
 
                 // Set brevity level
-                if (settings.brevity !== undefined) {
-                    document.querySelector('input[name="brevity"]').value = settings.brevity;
-                }
+                document.querySelector('input[name="brevity"]').value = settings.brevity !== undefined ? settings.brevity : 2;
 
                 // Set additional prompt
-                if (settings.additional_prompt) {
-                    document.getElementById('additional-prompt').value = settings.additional_prompt;
-                }
+                document.getElementById('additional-prompt').value = settings.additional_prompt || '';
             }
         })
         .catch(error => {
-            console.error('Error loading settings:', error);
+            console.error('Error loading settings for KB:', error);
         });
+    }
+
+    function showKbDetailsModal() {
+        if (!currentKbId) {
+            showMessage('Сначала выберите базу знаний.', 'error');
+            return;
+        }
+        
+        loadKbDetails();
+        kbDetailsModal.classList.remove('hidden');
+        kbDetailsModal.classList.add('flex');
+    }
+
+    function hideKbDetailsModal() {
+        kbDetailsModal.classList.add('hidden');
+        kbDetailsModal.classList.remove('flex');
+    }
+
+    async function loadKbDetails() {
+        try {
+            const response = await fetch(`/api/knowledge-bases/${currentKbId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('settings-kb-details-name').textContent = data.name;
+                document.getElementById('settings-kb-details-id').textContent = data.kb_id;
+                document.getElementById('settings-kb-details-created').textContent = new Date(data.created_at).toLocaleString('ru-RU');
+                document.getElementById('settings-kb-details-docs').textContent = data.document_count;
+                
+                // Display the actual password
+                const passwordElement = document.getElementById('settings-kb-details-password');
+                if (data.password) {
+                    passwordElement.textContent = data.password;
+                    passwordElement.className = 'text-white font-mono';
+                } else {
+                    passwordElement.textContent = 'Не установлен';
+                    passwordElement.className = 'text-[#718096] italic';
+                }
+                
+                // Display analyze_clients setting
+                const analyzeClientsElement = document.getElementById('settings-kb-details-analyze-clients');
+                if (data.analyze_clients !== undefined) {
+                    analyzeClientsElement.textContent = data.analyze_clients ? 'Включен' : 'Отключен';
+                    analyzeClientsElement.className = data.analyze_clients ? 'text-green-400' : 'text-red-400';
+                } else {
+                    analyzeClientsElement.textContent = 'Включен (по умолчанию)';
+                    analyzeClientsElement.className = 'text-green-400';
+                }
+            } else {
+                showMessage('Ошибка при загрузке деталей базы знаний.', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading KB details:', error);
+            showMessage('Ошибка при загрузке деталей базы знаний.', 'error');
+        }
     }
 
     function showMessage(text, type) {

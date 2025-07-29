@@ -12,12 +12,8 @@ from langchain_openai import OpenAIEmbeddings
 
 # ─── CONFIG ─────────────────────────────────────────────────────────────────────
 
-KNOWLEDGE_FILE    = Path(r"C:\PARTNERS\NeuroBot\Backend\knowledge.txt")
-FINGERPRINT_FILE  = Path(r"C:\PARTNERS\NeuroBot\Backend\last_fingerprint.json")
-VECTOR_STORE_DIR  = Path(r"C:\PARTNERS\NeuroBot\Backend\vector_KB")
-INDEX_FILE        = VECTOR_STORE_DIR / "index.faiss"
-DOCSTORE_FILE     = VECTOR_STORE_DIR / "docstore.json"
-UUID_NAMESPACE    = uuid.NAMESPACE_URL
+BASE_DIR = Path(__file__).resolve().parent.parent
+UUID_NAMESPACE = uuid.NAMESPACE_URL
 
 # ─── HELPERS ────────────────────────────────────────────────────────────────────
 
@@ -54,17 +50,38 @@ def main():
         raise EnvironmentError("OPENAI_API_KEY not found in .env file.")
     os.environ["OPENAI_API_KEY"] = api_key
 
+    # 2) Get user-specific paths
+    try:
+        from auth import get_current_user_data_dir
+        user_data_dir = get_current_user_data_dir()
+    except Exception as e:
+        print(f"Error getting user data directory: {str(e)}")
+        return False
 
-    # 2) Prepare directories
+    # Get current KB ID
+    try:
+        from app import get_current_kb_id
+        current_kb_id = get_current_kb_id()
+    except Exception as e:
+        print(f"Error getting current KB ID: {str(e)}")
+        return False
+
+    KNOWLEDGE_FILE = user_data_dir / "knowledge_bases" / current_kb_id / "knowledge.txt"
+    FINGERPRINT_FILE = user_data_dir / "knowledge_bases" / current_kb_id / "last_fingerprint.json"
+    VECTOR_STORE_DIR = user_data_dir / "knowledge_bases" / current_kb_id / "vector_KB"
+    INDEX_FILE = VECTOR_STORE_DIR / "index.faiss"
+    DOCSTORE_FILE = VECTOR_STORE_DIR / "docstore.json"
+
+    # 3) Prepare directories
     VECTOR_STORE_DIR.mkdir(parents=True, exist_ok=True)
 
-    # 3) Load previous fingerprint
+    # 4) Load previous fingerprint
     if FINGERPRINT_FILE.exists():
         old_fp = json.loads(FINGERPRINT_FILE.read_text(encoding="utf-8"))
     else:
         old_fp = {}
 
-    # 4) Read & hash current Q&A
+    # 5) Read & hash current Q&A
     txt = KNOWLEDGE_FILE.read_text(encoding="utf-8")
     blocks = split_qa_pairs(txt)
 

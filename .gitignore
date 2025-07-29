@@ -15,7 +15,7 @@ __pycache__/
 Thumbs.db
 
 # FAISS vector store and docstore
-Backend/vector_KB/
+user_data/admin/vector_KB/
 
 # Test and cache
 Backend/.pytest_cache/
@@ -27,5 +27,11 @@ Backend/.pytest_cache/
 *.so
 
 # Local data
-Backend/last_fingerprint.json
-Backend/dialogues.json 
+user_data/admin/last_fingerprint.json
+user_data/admin/dialogues.json
+user_data/admin/users.json
+user_data/admin/system_prompt.txt
+
+# User-specific data (exclude all user directories except admin)
+user_data/*/
+!user_data/admin/ 
