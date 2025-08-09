@@ -24,13 +24,6 @@ from balance_manager import balance_manager
 # Load environment variables
 load_dotenv(override=True)
 
-# Debug environment variables
-try:
-    from check_env import check_environment
-    check_environment()
-except Exception as e:
-    print(f"🔍 [DEBUG] Could not run environment check: {e}")
-
 # Initialize Flask app
 app = Flask(__name__, 
             template_folder='../Frontend/templates',
@@ -39,18 +32,6 @@ CORS(app)
 
 # Configure session
 app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
-
-# Initialize database
-print("🚀 [DEBUG] Initializing database from app.py...")
-try:
-    from database import init_database
-    db = init_database(app)
-    print("🎉 [DEBUG] Database initialization from app.py completed!")
-except Exception as e:
-    print(f"💥 [DEBUG] Database initialization from app.py FAILED: {e}")
-    import traceback
-    traceback.print_exc()
-    raise
 
 # Initialize services
 chatbot_service = chatbot_service
@@ -163,16 +144,7 @@ def get_current_kb_id() -> str:
         if current_kb_file.exists():
             with open(current_kb_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                kb_id = data.get('current_kb_id', 'default')
-                
-                # Ensure the KB actually exists
-                kb_dir = user_data_dir / "knowledge_bases" / kb_id
-                if kb_dir.exists():
-                    return kb_id
-                else:
-                    # KB was deleted, fallback to default
-                    print(f"KB '{kb_id}' not found, falling back to default")
-                    return create_default_knowledge_base()
+                return data.get('current_kb_id', 'default')
         else:
             # Create default KB if none exists
             return create_default_knowledge_base()
@@ -360,35 +332,26 @@ def contact():
 @app.route('/api/signup', methods=['POST'])
 def api_signup():
     """API endpoint for user registration."""
-    print("🔍 [DEBUG] API signup endpoint called")
     data = request.get_json()
     username = data.get('username', '').strip()
     password = data.get('password', '').strip()
     email = data.get('email', '').strip()
     
-    print(f"🔍 [DEBUG] Signup data - username: {username}, email: {email}")
     result = auth.register_user(username, password, email)
-    print(f"🔍 [DEBUG] Signup result: {result}")
     return jsonify(result)
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
     """API endpoint for user login."""
-    print("🔍 [DEBUG] API login endpoint called")
     data = request.get_json()
     username = data.get('username', '').strip()
     password = data.get('password', '').strip()
     
-    print(f"🔍 [DEBUG] Login attempt - username: {username}")
     result = auth.login_user(username, password)
-    print(f"🔍 [DEBUG] Login result: {result}")
     
     if result['success']:
         session['username'] = username
         session['user_data_dir'] = result['data_directory']
-        print(f"✅ [DEBUG] Session created for user: {username}")
-    else:
-        print(f"❌ [DEBUG] Login failed for user: {username}")
     
     return jsonify(result)
 
@@ -1407,14 +1370,10 @@ def create_knowledge_base():
         vector_dir = kb_dir / "vector_KB"
         vector_dir.mkdir(exist_ok=True)
         
-        # DO NOT automatically switch to the new KB
-        # Let user explicitly switch if they want to use it
-        
         return jsonify({
             'success': True,
             'kb_id': kb_id,
-            'kb_name': kb_name,
-            'message': f'База знаний "{kb_name}" создана. Используйте переключатель для активации.'
+            'kb_name': kb_name
         })
     except Exception as e:
         print(f"Error in create_knowledge_base: {str(e)}")
@@ -1440,29 +1399,6 @@ def switch_knowledge_base(kb_id):
         print(f"Error in switch_knowledge_base: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/knowledge-bases/reset-to-default', methods=['POST'])
-@login_required
-def reset_to_default_kb():
-    """API endpoint to reset to default knowledge base."""
-    try:
-        user_data_dir = get_current_user_data_dir()
-        
-        # Ensure default KB exists
-        create_default_knowledge_base()
-        
-        # Switch to default KB
-        with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
-            json.dump({'current_kb_id': 'default'}, f, ensure_ascii=False, indent=2)
-        
-        return jsonify({
-            'success': True, 
-            'kb_id': 'default',
-            'message': 'Переключено на базу знаний по умолчанию'
-        })
-    except Exception as e:
-        print(f"Error in reset_to_default_kb: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/api/knowledge-bases/<kb_id>', methods=['DELETE'])
 @login_required
 def delete_knowledge_base(kb_id):
@@ -1477,9 +1413,7 @@ def delete_knowledge_base(kb_id):
         # Check if this is the current KB
         current_kb_id = get_current_kb_id()
         if kb_id == current_kb_id:
-            # Switch to default KB before deleting
-            with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
-                json.dump({'current_kb_id': 'default'}, f, ensure_ascii=False, indent=2)
+            return jsonify({'error': 'Нельзя удалить активную базу знаний'}), 400
         
         # Delete the KB directory
         import shutil

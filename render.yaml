@@ -5,6 +5,10 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn Backend.wsgi:app --bind 0.0.0.0:$PORT
+    disk:
+      name: neurobot-data
+      mountPath: /opt/render/project/src/user_data
+      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -14,5 +18,3 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true
-      - key: DATABASE_URL
-        sync: false
