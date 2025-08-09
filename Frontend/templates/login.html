@@ -139,6 +139,7 @@
             font-weight: bold;
             color: #DC4918;
             margin-left: 0.75rem;
+            margin-top: -6px;
         }
     </style>
 </head>
@@ -199,7 +200,12 @@
                     localStorage.setItem('username', data.username);
                     showMessage('success', 'Вход выполнен успешно! Перенаправление...');
                     setTimeout(() => {
-                        window.location.href = '/';
+                        // Check if user is admin and redirect accordingly
+                        if (data.is_admin) {
+                            window.location.href = '/admin';
+                        } else {
+                            window.location.href = '/';
+                        }
                     }, 1000);
                 } else {
                     showMessage('error', data.error || 'Ошибка входа');

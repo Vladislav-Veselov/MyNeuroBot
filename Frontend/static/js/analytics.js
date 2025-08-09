@@ -2,12 +2,15 @@
 class AnalyticsManager {
     constructor() {
         this.currentSessionId = null;
+        this.allSessions = []; // Store all sessions for filtering
+        this.selectedKbId = 'all'; // Track selected KB
         this.init();
     }
 
     init() {
         this.analyzeUnreadSessions();
         this.loadStatistics();
+        this.loadKnowledgeBases();
         this.loadSessions();
         this.bindEvents();
     }
@@ -17,11 +20,18 @@ class AnalyticsManager {
         document.getElementById('refresh-btn').addEventListener('click', () => {
             this.analyzeUnreadSessions();
             this.loadStatistics();
+            this.loadKnowledgeBases();
         });
 
         // Clear all button
         document.getElementById('clear-all-btn').addEventListener('click', () => {
             this.clearAllSessions();
+        });
+
+        // KB selector change
+        document.getElementById('kb-selector').addEventListener('change', (e) => {
+            this.selectedKbId = e.target.value;
+            this.filterSessions();
         });
 
         // Modal close button
@@ -91,10 +101,12 @@ class AnalyticsManager {
                 }
                 // Always refresh sessions to show updated potential client status
                 this.loadSessions();
+                this.filterSessions();
             } else {
                 console.error('Failed to analyze sessions:', data.error);
                 // Still refresh sessions even if analysis failed
                 this.loadSessions();
+                this.filterSessions();
             }
         } catch (error) {
             console.error('Error analyzing sessions:', error);
@@ -190,13 +202,80 @@ class AnalyticsManager {
         document.getElementById('file-size').textContent = `${stats.file_size_mb || 0} МБ`;
     }
 
+    async loadKnowledgeBases() {
+        try {
+            const response = await fetch('/api/knowledge-bases');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.populateKbSelector(data.knowledge_bases);
+            } else {
+                console.error('Failed to load knowledge bases:', data.error);
+            }
+        } catch (error) {
+            console.error('Error loading knowledge bases:', error);
+        }
+    }
+
+    populateKbSelector(knowledgeBases) {
+        const selector = document.getElementById('kb-selector');
+        const currentValue = selector.value; // Preserve current selection
+        
+        // Clear existing options except "all"
+        selector.innerHTML = '<option value="all">Все базы знаний</option>';
+        
+        // Add KB options
+        knowledgeBases.forEach(kb => {
+            const option = document.createElement('option');
+            option.value = kb.id; // Use kb.id instead of kb.kb_id
+            option.textContent = kb.name || kb.id;
+            selector.appendChild(option);
+        });
+        
+        // Restore selection if it was valid
+        if (currentValue && currentValue !== 'all') {
+            const option = selector.querySelector(`option[value="${currentValue}"]`);
+            if (option) {
+                selector.value = currentValue;
+                this.selectedKbId = currentValue;
+            }
+        }
+        
+        // Update KB session counts
+        this.updateKbSessionCounts();
+    }
+
+    updateKbSessionCounts() {
+        // Count sessions per KB
+        const kbCounts = {};
+        this.allSessions.forEach(session => {
+            const kbId = session.kb_id || 'unknown';
+            kbCounts[kbId] = (kbCounts[kbId] || 0) + 1;
+        });
+        
+        // Update option text to show session counts
+        const selector = document.getElementById('kb-selector');
+        selector.querySelectorAll('option').forEach(option => {
+            if (option.value === 'all') {
+                const totalSessions = this.allSessions.length;
+                option.textContent = `Все базы знаний (${totalSessions})`;
+            } else {
+                const count = kbCounts[option.value] || 0;
+                const originalText = option.textContent.split(' (')[0]; // Remove existing count if any
+                option.textContent = `${originalText} (${count})`;
+            }
+        });
+    }
+
     async loadSessions() {
         try {
             const response = await fetch('/api/dialogues');
             const data = await response.json();
             
             if (data.success) {
-                this.renderSessions(data.sessions);
+                this.allSessions = data.sessions; // Store all sessions
+                this.updateKbSessionCounts(); // Update KB session counts
+                this.filterSessions(); // Apply current filter
             } else {
                 console.error('Failed to load sessions:', data.error);
                 this.showEmptyState('Ошибка загрузки диалогов');
@@ -207,11 +286,32 @@ class AnalyticsManager {
         }
     }
 
+    filterSessions() {
+        let filteredSessions = this.allSessions;
+        
+        // Filter by selected KB
+        if (this.selectedKbId !== 'all') {
+            filteredSessions = this.allSessions.filter(session => 
+                session.kb_id === this.selectedKbId
+            );
+        }
+        
+        this.renderSessions(filteredSessions);
+    }
+
     renderSessions(sessions) {
         const container = document.getElementById('sessions-container');
         
         if (!sessions || sessions.length === 0) {
-            this.showEmptyState('Нет диалогов');
+            if (this.selectedKbId !== 'all') {
+                // Get the KB name for the selected KB
+                const selector = document.getElementById('kb-selector');
+                const selectedOption = selector.querySelector(`option[value="${this.selectedKbId}"]`);
+                const kbName = selectedOption ? selectedOption.textContent : this.selectedKbId;
+                this.showEmptyState(`Нет диалогов для базы знаний "${kbName}"`);
+            } else {
+                this.showEmptyState('Нет диалогов');
+            }
             return;
         }
 
@@ -311,8 +411,9 @@ class AnalyticsManager {
                 this.renderDialogue(data);
                 this.openModal();
                 
-                // Refresh sessions to update unread status immediately
-                this.loadSessions();
+                            // Refresh sessions to update unread status immediately
+            this.loadSessions();
+            this.filterSessions();
             } else {
                 console.error('Failed to load session:', data.error);
                 alert('Ошибка загрузки диалога');
@@ -418,6 +519,7 @@ class AnalyticsManager {
         
         // Refresh sessions to update unread status
         this.loadSessions();
+        this.filterSessions();
     }
 
     async deleteCurrentSession() {
@@ -435,6 +537,7 @@ class AnalyticsManager {
                 this.closeModal();
                 this.loadStatistics();
                 this.loadSessions();
+                this.filterSessions();
             } else {
                 console.error('Failed to delete session:', data.error);
                 alert('Ошибка удаления сессии');
@@ -458,6 +561,7 @@ class AnalyticsManager {
                 this.closeModal();
                 this.loadStatistics();
                 this.loadSessions();
+                this.filterSessions();
             } else {
                 console.error('Failed to clear sessions:', data.error);
                 alert('Ошибка очистки сессий');
@@ -486,6 +590,7 @@ class AnalyticsManager {
             if (data.success) {
                 // Refresh sessions to show updated status
                 this.loadSessions();
+                this.filterSessions();
             } else {
                 console.error('Failed to toggle potential client:', data.error);
                 alert('Ошибка при изменении статуса клиента');

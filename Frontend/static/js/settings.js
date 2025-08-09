@@ -7,9 +7,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const kbDetailsModal = document.getElementById('settings-kb-details-modal');
     const closeKbDetailsModal = document.getElementById('close-settings-kb-details-modal');
     const closeKbDetails = document.getElementById('close-settings-kb-details');
+    const stopChatbotBtn = document.getElementById('stop-chatbot-btn');
+    const startChatbotBtn = document.getElementById('start-chatbot-btn');
+    const chatbotStatus = document.getElementById('chatbot-status');
+    const chatbotStatusDetails = document.getElementById('chatbot-status-details');
+    const chatbotStopTime = document.getElementById('chatbot-stop-time');
+    const chatbotStopMessage = document.getElementById('chatbot-stop-message');
+    const currentModel = document.getElementById('current-model');
+    const modelSelector = document.getElementById('model-selector');
+    const saveModelBtn = document.getElementById('save-model-btn');
+    const deleteSettingsKbBtn = document.getElementById('delete-settings-kb-btn');
 
     let currentKbId = null;
     let knowledgeBases = [];
+    let modelConfig = null;
 
     // Initialize settings page
     initSettingsPage();
@@ -19,6 +30,8 @@ document.addEventListener('DOMContentLoaded', function() {
         kbSelector.innerHTML = '<option value="">Загрузка...</option>';
         
         loadKnowledgeBases();
+        loadChatbotStatus();
+        loadModelConfig();
         setupEventListeners();
     }
 
@@ -103,6 +116,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const option = document.createElement('option');
             option.value = '';
             option.textContent = 'Нет баз знаний';
+            option.style.backgroundColor = '#242A36';
+            option.style.color = 'white';
             kbSelector.appendChild(option);
             return;
         }
@@ -111,6 +126,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const option = document.createElement('option');
             option.value = kb.id;
             option.textContent = kb.name;
+            option.style.backgroundColor = '#242A36';
+            option.style.color = 'white';
             if (kb.id === currentKbId) {
                 option.selected = true;
             }
@@ -147,6 +164,248 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target === kbDetailsModal) {
                 hideKbDetailsModal();
             }
+        });
+
+        // Chatbot control buttons
+        stopChatbotBtn.addEventListener('click', stopChatbot);
+        startChatbotBtn.addEventListener('click', startChatbot);
+
+        // Model selection
+        saveModelBtn.addEventListener('click', saveModel);
+
+        // KB delete button - use event delegation since button is in modal
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'delete-settings-kb-btn') {
+                e.preventDefault();
+                e.stopPropagation();
+                deleteCurrentKb();
+            }
+        });
+    }
+
+    function loadChatbotStatus() {
+        fetch('/api/chatbot/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateChatbotStatusDisplay(data.status);
+            } else {
+                console.error('Failed to load chatbot status:', data.error);
+                chatbotStatus.textContent = 'Ошибка загрузки статуса';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading chatbot status:', error);
+            chatbotStatus.textContent = 'Ошибка загрузки статуса';
+        });
+    }
+
+    function updateChatbotStatusDisplay(status) {
+        if (status.stopped) {
+            chatbotStatus.textContent = 'Остановлен';
+            chatbotStatus.className = 'text-red-400 font-medium';
+            stopChatbotBtn.classList.add('hidden');
+            startChatbotBtn.classList.remove('hidden');
+            
+            // Show stop details
+            chatbotStatusDetails.classList.remove('hidden');
+            if (status.stopped_at) {
+                const stopDate = new Date(status.stopped_at);
+                chatbotStopTime.textContent = `Остановлен: ${stopDate.toLocaleString('ru-RU')}`;
+            }
+            if (status.message) {
+                chatbotStopMessage.textContent = `Сообщение: ${status.message}`;
+            }
+        } else {
+            chatbotStatus.textContent = 'Работает';
+            chatbotStatus.className = 'text-green-400 font-medium';
+            stopChatbotBtn.classList.remove('hidden');
+            startChatbotBtn.classList.add('hidden');
+            chatbotStatusDetails.classList.add('hidden');
+        }
+    }
+
+    function stopChatbot() {
+        if (!confirm('Вы уверены, что хотите остановить чатбот? Все чатботы для вашего аккаунта будут недоступны.')) {
+            return;
+        }
+
+        const message = prompt('Введите сообщение для пользователей (необязательно):', 'Чатбот временно остановлен');
+        
+        fetch('/api/chatbot/stop', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message || 'Чатбот временно остановлен'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Чатботы успешно остановлены', 'success');
+                loadChatbotStatus(); // Reload status
+            } else {
+                showMessage(data.error || 'Ошибка при остановке чатботов', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Ошибка при остановке чатботов', 'error');
+        });
+    }
+
+    function startChatbot() {
+        fetch('/api/chatbot/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Чатботы успешно запущены', 'success');
+                loadChatbotStatus(); // Reload status
+            } else {
+                showMessage(data.error || 'Ошибка при запуске чатботов', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Ошибка при запуске чатботов', 'error');
+        });
+    }
+
+    function loadModelConfig() {
+        fetch('/api/model/config')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                modelConfig = data.config;
+                updateModelDisplay();
+            } else {
+                console.error('Failed to load model config:', data.error);
+                currentModel.textContent = 'Ошибка загрузки';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading model config:', error);
+            currentModel.textContent = 'Ошибка загрузки';
+        });
+    }
+
+    function updateModelDisplay() {
+        if (!modelConfig) return;
+
+        // Update current model display
+        currentModel.textContent = modelConfig.current_model_name;
+
+        // Update model selector
+        modelSelector.innerHTML = '';
+        Object.entries(modelConfig.available_models).forEach(([modelId, modelName]) => {
+            const option = document.createElement('option');
+            option.value = modelId;
+            option.textContent = modelName;
+            option.style.backgroundColor = '#242A36';
+            option.style.color = 'white';
+            if (modelId === modelConfig.model) {
+                option.selected = true;
+            }
+            modelSelector.appendChild(option);
+        });
+    }
+
+    function saveModel() {
+        const selectedModel = modelSelector.value;
+        if (!selectedModel) {
+            showMessage('Пожалуйста, выберите модель', 'error');
+            return;
+        }
+
+        fetch('/api/model/set', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: selectedModel
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(data.message, 'success');
+                modelConfig = data.config;
+                updateModelDisplay();
+            } else {
+                showMessage(data.error || 'Ошибка при изменении модели', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Ошибка при изменении модели', 'error');
+        });
+    }
+
+    function deleteCurrentKb() {
+        if (!currentKbId) {
+            showMessage('Сначала выберите базу знаний.', 'error');
+            return;
+        }
+
+        // Get KB name for confirmation
+        const kbName = knowledgeBases.find(kb => kb.id === currentKbId)?.name || currentKbId;
+        
+        // Check if this is the current active KB by getting the current KB from the backend
+        fetch('/api/knowledge-bases')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const currentActiveKb = data.knowledge_bases.find(kb => kb.id === data.current_kb_id);
+                
+                if (currentKbId === data.current_kb_id) {
+                    showMessage('Нельзя удалить активную базу знаний. Сначала переключитесь на другую базу знаний.', 'error');
+                    return;
+                }
+                
+                // Proceed with deletion
+                proceedWithDeletion(kbName);
+            } else {
+                showMessage('Ошибка при проверке активной базы знаний', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error checking current KB:', error);
+            showMessage('Ошибка при проверке активной базы знаний', 'error');
+        });
+    }
+
+    function proceedWithDeletion(kbName) {
+        if (!confirm(`Вы уверены, что хотите удалить базу знаний "${kbName}"?\n\nЭто действие нельзя отменить. Все данные будут потеряны.`)) {
+            return;
+        }
+
+        fetch(`/api/knowledge-bases/${currentKbId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(`База знаний "${kbName}" успешно удалена`, 'success');
+                hideKbDetailsModal();
+                loadKnowledgeBases(); // Reload KB list
+            } else {
+                showMessage(data.error || 'Ошибка при удалении базы знаний', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Ошибка при удалении базы знаний', 'error');
         });
     }
 

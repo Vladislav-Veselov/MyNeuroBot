@@ -16,7 +16,7 @@
                     <!-- Logo/Brand -->
                     <div class="flex items-center">
                         <img src="{{ url_for('static', filename='logo.png') }}" alt="NeuroBot Logo" class="h-8 w-auto mr-3">
-                        <span class="text-xl font-bold text-white">NeuroBot</span>
+                        <span class="text-xl font-bold text-gray-400 -mt-1.5">NeuroBot</span>
                     </div>
                     
                     <!-- Navigation Links -->
@@ -28,14 +28,17 @@
                             <a href="/analytics" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
                                 Аналитика
                             </a>
-                            <a href="/settings" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                            <a href="/settings" class="text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
                                 Настройки
                             </a>
                             <a href="/chatbot" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
                                 Чатбот
                             </a>
+                            <a href="/balance" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                Баланс
+                            </a>
                             <a href="/about" class="text-[#A0AEC0] hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                                О нас
+                                Справка
                             </a>
                         </div>
                     </div>
@@ -81,14 +84,17 @@
                     <a href="/analytics" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
                         Аналитика
                     </a>
-                    <a href="/settings" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                    <a href="/settings" class="text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
                         Настройки
                     </a>
                     <a href="/chatbot" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
                         Чатбот
                     </a>
+                    <a href="/balance" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
+                        Баланс
+                    </a>
                     <a href="/about" class="text-[#A0AEC0] hover:text-white block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200">
-                        О нас
+                        Справка
                     </a>
                 </div>
             </div>
@@ -105,8 +111,8 @@
                     <div class="mt-4 p-4 bg-[#1E2328] rounded-lg border border-[#2D3446]">
                         <label class="block text-sm font-medium text-[#A0AEC0] mb-2">База знаний</label>
                         <div class="flex items-center space-x-2">
-                            <select id="settings-kb-selector" class="px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918] min-w-[200px]">
-                                <option value="">Загрузка...</option>
+                            <select id="settings-kb-selector" class="min-w-[200px]" style="background-color: #242A36; color: white; border: 1px solid #2D3446; border-radius: 0.5rem; padding: 0.5rem 0.75rem;">
+                                <option value="" style="background-color: #242A36; color: white;">Загрузка...</option>
                             </select>
                             <button id="settings-kb-details-btn" class="btn-secondary" title="Детали базы знаний">
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,6 +203,53 @@
                         <button type="submit" class="btn-primary px-8 py-3">
                             Сохранить настройки
                         </button>
+                    </div>
+
+                    <!-- Model Selection Section -->
+                    <div class="bg-[#1E2328] rounded-lg p-4 mt-6">
+                        <label class="block text-lg font-medium text-white mb-3">Модель ИИ</label>
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-[#A0AEC0] mb-2">Текущая модель:</p>
+                                <p id="current-model" class="text-white font-medium">Загрузка...</p>
+                            </div>
+                            <div>
+                                <label for="model-selector" class="block text-sm font-medium text-[#A0AEC0] mb-2">Выберите модель:</label>
+                                <select id="model-selector" class="min-w-[300px]" style="background-color: #242A36; color: white; border: 1px solid #2D3446; border-radius: 0.5rem; padding: 0.5rem 0.75rem;">
+                                    <option value="" style="background-color: #242A36; color: white;">Загрузка...</option>
+                                </select>
+                            </div>
+                            <div class="flex justify-end">
+                                <button id="save-model-btn" class="btn-primary px-6 py-2">
+                                    Сохранить модель
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chatbot Control Section -->
+                    <div class="bg-[#1E2328] rounded-lg p-4 mt-6">
+                        <label class="block text-lg font-medium text-white mb-3">Управление чатботом</label>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-[#A0AEC0] mb-2">Статус чатбота:</p>
+                                    <p id="chatbot-status" class="text-white font-medium">Загрузка...</p>
+                                </div>
+                                <div class="flex space-x-3">
+                                    <button id="stop-chatbot-btn" class="btn-danger px-6 py-2">
+                                        Остановить чатбот
+                                    </button>
+                                    <button id="start-chatbot-btn" class="btn-success px-6 py-2 hidden">
+                                        Запустить чатбот
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="chatbot-status-details" class="text-sm text-[#718096] hidden">
+                                <p id="chatbot-stop-time"></p>
+                                <p id="chatbot-stop-message"></p>
+                            </div>
+                        </div>
                     </div>
                 </form>
 
@@ -314,7 +367,13 @@
                         <p id="settings-kb-details-analyze-clients" class="text-white"></p>
                     </div>
                 </div>
-                <div class="flex justify-end mt-6">
+                <div class="flex justify-between mt-6">
+                    <button id="delete-settings-kb-btn" type="button" class="btn-danger">
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Удалить базу знаний
+                    </button>
                     <button id="close-settings-kb-details" class="btn-outline">Закрыть</button>
                 </div>
             </div>

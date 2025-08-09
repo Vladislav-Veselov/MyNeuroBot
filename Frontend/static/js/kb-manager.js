@@ -44,7 +44,9 @@ class KnowledgeBaseManager {
             selector.innerHTML = '';
             const option = document.createElement('option');
             option.value = 'default';
-            option.textContent = 'Основная база знаний';
+            option.textContent = 'База знаний для клиентов';
+            option.style.backgroundColor = '#242A36';
+            option.style.color = 'white';
             option.selected = true;
             selector.appendChild(option);
         }
@@ -65,6 +67,8 @@ class KnowledgeBaseManager {
             const option = document.createElement('option');
             option.value = '';
             option.textContent = 'Нет баз знаний';
+            option.style.backgroundColor = '#242A36';
+            option.style.color = 'white';
             selector.innerHTML = '';
             selector.appendChild(option);
             return;
@@ -76,6 +80,8 @@ class KnowledgeBaseManager {
             const option = document.createElement('option');
             option.value = kb.id;
             option.textContent = kb.name;
+            option.style.backgroundColor = '#242A36';
+            option.style.color = 'white';
             if (kb.id === this.currentKbId) {
                 option.selected = true;
             }
@@ -463,6 +469,48 @@ class KnowledgeBaseManager {
         return yesBtn && yesBtn.classList.contains('active');
     }
 
+    // Password validation functions
+    validatePassword(password) {
+        // Check if password contains both letters and numbers
+        const hasLetters = /[a-zA-Zа-яА-Я]/.test(password);
+        const hasNumbers = /[0-9]/.test(password);
+        
+        if (!hasLetters || !hasNumbers) {
+            return {
+                isValid: false,
+                error: 'Пароль должен содержать буквы и цифры'
+            };
+        }
+        
+        return { isValid: true };
+    }
+
+    async checkPasswordUniqueness(password) {
+        try {
+            const response = await fetch('/api/knowledge-bases/check-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ password })
+            });
+            
+            const data = await response.json();
+            
+            if (data.is_unique) {
+                return { isUnique: true };
+            } else {
+                return {
+                    isUnique: false,
+                    error: data.error || 'Пароль уже используется в другой базе знаний'
+                };
+            }
+        } catch (error) {
+            console.error('Error checking password uniqueness:', error);
+            return { isUnique: true }; // Allow if we can't check
+        }
+    }
+
     async createKnowledgeBase() {
         const input = document.getElementById('kb-name');
         const passwordInput = document.getElementById('kb-password');
@@ -481,6 +529,20 @@ class KnowledgeBaseManager {
             return;
         }
 
+        // Validate password format
+        const passwordValidation = this.validatePassword(password);
+        if (!passwordValidation.isValid) {
+            error.textContent = passwordValidation.error;
+            return;
+        }
+
+        // Check password uniqueness
+        const uniquenessCheck = await this.checkPasswordUniqueness(password);
+        if (!uniquenessCheck.isUnique) {
+            error.textContent = uniquenessCheck.error;
+            return;
+        }
+
         try {
             const response = await fetch('/api/knowledge-bases', {
                 method: 'POST',
@@ -495,7 +557,7 @@ class KnowledgeBaseManager {
             if (data.success) {
                 this.hideCreateKbModal();
                 await this.loadKnowledgeBases();
-                this.switchKnowledgeBase(data.kb_id);
+                // Don't automatically switch to the new KB - stay on current KB
                 
                 // Show success message
                 this.showNotification('База знаний успешно создана!', 'success');

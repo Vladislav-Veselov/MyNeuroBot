@@ -57,18 +57,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 message: message
             })
         })
-        .then(response => response.json())
-        .then(data => {
-            // Remove typing indicator
-            removeTypingIndicator();
-            
-            if (data.success) {
-                // Add bot response
-                addMessage(data.response, 'bot');
-            } else {
-                // Add error message
-                addMessage('Извините, произошла ошибка: ' + (data.error || 'Неизвестная ошибка'), 'bot');
+        .then(response => {
+            if (response.status === 503) {
+                // Chatbot is stopped
+                return response.json().then(data => {
+                    removeTypingIndicator();
+                    if (data.chatbot_stopped) {
+                        addMessage(data.error || 'Чатбот временно недоступен', 'bot');
+                    } else {
+                        addMessage('Извините, произошла ошибка: ' + (data.error || 'Неизвестная ошибка'), 'bot');
+                    }
+                });
             }
+            return response.json().then(data => {
+                // Remove typing indicator
+                removeTypingIndicator();
+                
+                if (data.success) {
+                    // Add bot response
+                    addMessage(data.response, 'bot');
+                } else {
+                    // Add error message
+                    addMessage('Извините, произошла ошибка: ' + (data.error || 'Неизвестная ошибка'), 'bot');
+                }
+            });
         })
         .catch(error => {
             console.error('Error:', error);

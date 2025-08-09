@@ -83,4 +83,151 @@
     margin-top: 0.5rem;
     padding-top: 0.5rem;
     border-top: 1px solid #e0e0e0;
+}
+
+/* Button styles */
+.btn-primary {
+    background-color: #DC4918;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #B83A15;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background-color: #2D3446;
+    color: white;
+    border: 1px solid #4A5568;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #4A5568;
+    transform: translateY(-1px);
+}
+
+.btn-danger {
+    background-color: #E53E3E;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-danger:hover {
+    background-color: #C53030;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background-color: #38A169;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-success:hover {
+    background-color: #2F855A;
+    transform: translateY(-1px);
+}
+
+.btn-outline {
+    background-color: transparent;
+    color: #A0AEC0;
+    border: 1px solid #4A5568;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-outline:hover {
+    background-color: #2D3446;
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* Select element styles */
+select,
+select:focus,
+select:hover,
+select:active {
+    background-color: #242A36 !important;
+    color: white !important;
+    border: 1px solid #2D3446 !important;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+select:focus {
+    outline: none;
+    border-color: #DC4918 !important;
+    box-shadow: 0 0 0 2px rgba(220, 73, 24, 0.2);
+}
+
+select:hover {
+    border-color: #4A5568 !important;
+}
+
+/* Specific selectors for our select elements */
+#model-selector,
+#settings-kb-selector,
+#kb-selector {
+    background-color: #242A36 !important;
+    color: white !important;
+    border: 1px solid #2D3446 !important;
+}
+
+#model-selector:focus,
+#settings-kb-selector:focus,
+#kb-selector:focus {
+    background-color: #242A36 !important;
+    color: white !important;
+    border-color: #DC4918 !important;
+}
+
+/* Option styles */
+select option,
+select option:checked,
+select option:hover {
+    background-color: #242A36 !important;
+    color: white !important;
+    padding: 0.5rem;
+}
+
+select option:hover {
+    background-color: #2D3446 !important;
+}
+
+select option:checked {
+    background-color: #DC4918 !important;
+    color: white !important;
+}
+
+/* Browser-specific overrides */
+select::-ms-expand {
+    display: none;
+}
+
+/* Ensure text is always visible */
+select,
+select option {
+    color: white !important;
+    background-color: #242A36 !important;
 } 
