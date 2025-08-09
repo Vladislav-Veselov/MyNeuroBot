@@ -33,6 +33,10 @@ CORS(app)
 # Configure session
 app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 
+# Initialize database
+from database import init_database
+db = init_database(app)
+
 # Initialize services
 chatbot_service = chatbot_service
 
