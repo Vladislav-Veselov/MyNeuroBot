@@ -15,6 +15,17 @@ project_root = backend_dir.parent
 user_data_dir = project_root / "user_data"
 user_data_dir.mkdir(exist_ok=True)
 
+# Debug: Print directory information
+print(f"Project root: {project_root}")
+print(f"User data dir: {user_data_dir}")
+print(f"User data dir exists: {user_data_dir.exists()}")
+print(f"User data dir is mount: {user_data_dir.is_mount()}")
+
+# Check if it's the persistent disk mount
+import shutil
+total, used, free = shutil.disk_usage(user_data_dir)
+print(f"Disk usage - Total: {total // (1024**3)}GB, Used: {used // (1024**2)}MB, Free: {free // (1024**3)}GB")
+
 # Initialize users.json if it doesn't exist
 users_file = user_data_dir / "users.json"
 if not users_file.exists():
@@ -22,6 +33,11 @@ if not users_file.exists():
     with open(users_file, 'w', encoding='utf-8') as f:
         json.dump({}, f, indent=2)
     print(f"Initialized empty users.json at {users_file}")
+else:
+    print(f"users.json already exists at {users_file}")
+
+# List contents of user_data directory
+print(f"Contents of {user_data_dir}: {list(user_data_dir.iterdir()) if user_data_dir.exists() else 'Directory does not exist'}")
 
 try:
     from app import app

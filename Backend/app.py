@@ -1729,6 +1729,55 @@ def get_transactions():
         print(f"Error in get_transactions: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/debug/disk-status')
+@login_required
+def debug_disk_status():
+    """Debug endpoint to check disk status and user data."""
+    try:
+        import shutil
+        import os
+        
+        # Get user data directory
+        user_data_base = BASE_DIR / "user_data"
+        current_user_dir = get_current_user_data_dir()
+        
+        # Get disk usage
+        total, used, free = shutil.disk_usage(user_data_base)
+        
+        # List all files in user directory
+        files_info = []
+        if current_user_dir.exists():
+            for root, dirs, files in os.walk(current_user_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    size = os.path.getsize(file_path)
+                    files_info.append({
+                        'path': file_path,
+                        'size': size,
+                        'relative_path': os.path.relpath(file_path, current_user_dir)
+                    })
+        
+        return jsonify({
+            'success': True,
+            'disk_info': {
+                'total_gb': round(total / (1024**3), 2),
+                'used_mb': round(used / (1024**2), 2),
+                'free_gb': round(free / (1024**3), 2)
+            },
+            'paths': {
+                'base_dir': str(BASE_DIR),
+                'user_data_base': str(user_data_base),
+                'current_user_dir': str(current_user_dir),
+                'current_user_exists': current_user_dir.exists()
+            },
+            'files': files_info,
+            'total_files': len(files_info),
+            'total_user_data_size': sum(f['size'] for f in files_info)
+        })
+    except Exception as e:
+        print(f"Error in debug_disk_status: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 # Admin routes
 @app.route('/admin')
 @admin_required_web

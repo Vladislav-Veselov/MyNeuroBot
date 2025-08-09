@@ -82,6 +82,12 @@ class UserAuth:
         user_data_dir = BASE_DIR / "user_data" / username
         user_data_dir.mkdir(parents=True, exist_ok=True)
         
+        # Debug: Print user directory creation
+        print(f"Creating user directory: {user_data_dir}")
+        print(f"User directory exists: {user_data_dir.exists()}")
+        print(f"User directory parent: {user_data_dir.parent}")
+        print(f"User directory parent exists: {user_data_dir.parent.exists()}")
+        
         # Create knowledge_bases directory structure
         kb_dir = user_data_dir / "knowledge_bases"
         kb_dir.mkdir(exist_ok=True)
@@ -148,7 +154,18 @@ class UserAuth:
             "data_directory": str(user_data_dir)
         }
         
+        print(f"About to save users.json to: {self.users_file}")
+        print(f"Users data: {list(self.users.keys())}")
         self._save_users()
+        print(f"Users.json saved successfully. File exists: {self.users_file.exists()}")
+        
+        # Debug: Check file sizes in user directory
+        import os
+        for root, dirs, files in os.walk(user_data_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                size = os.path.getsize(file_path)
+                print(f"File: {file_path}, Size: {size} bytes")
         
         return {"success": True, "message": "User registered successfully"}
     
