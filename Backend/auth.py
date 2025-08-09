@@ -27,41 +27,72 @@ class UserAuth:
     def __init__(self):
         print("🔍 [DEBUG] UserAuth initializing...")
         print(f"🔍 [DEBUG] Users file path: {USERS_FILE}")
-        self.users_file = USERS_FILE
-        self.users_file.parent.mkdir(parents=True, exist_ok=True)
         
-        # Check if DATABASE_URL is available for potential DB usage
-        database_url = os.getenv('DATABASE_URL')
-        if database_url:
-            print("🔍 [DEBUG] DATABASE_URL detected - could use database for auth")
+        # Check if DATABASE_URL is available
+        self.database_url = os.getenv('DATABASE_URL')
+        if self.database_url:
+            print("🔍 [DEBUG] DATABASE_URL detected - using database for auth")
+            self.use_database = True
         else:
             print("🔍 [DEBUG] No DATABASE_URL - using file-based auth")
+            self.use_database = False
+            self.users_file = USERS_FILE
+            self.users_file.parent.mkdir(parents=True, exist_ok=True)
             
         self._load_users()
     
     def _load_users(self):
-        """Load users from JSON file."""
-        print(f"🔍 [DEBUG] Loading users from file: {self.users_file}")
-        if self.users_file.exists():
+        """Load users from database or file."""
+        if self.use_database:
+            print("🔍 [DEBUG] Loading users from PostgreSQL database")
             try:
-                with open(self.users_file, 'r', encoding='utf-8') as f:
-                    self.users = json.load(f)
-                print(f"✅ [DEBUG] Loaded {len(self.users)} users from file")
+                from database import User
+                from flask import current_app
+                
+                with current_app.app_context():
+                    db_users = User.query.all()
+                    self.users = {}
+                    for user in db_users:
+                        if user.username != 'admin':  # Skip admin user
+                            self.users[user.username] = {
+                                'password_hash': user.password_hash,
+                                'email': user.email,
+                                'created_at': user.created_at.isoformat(),
+                                'last_login': user.last_login.isoformat() if user.last_login else None,
+                                'data_directory': str(BASE_DIR / "user_data" / user.username)
+                            }
+                    print(f"✅ [DEBUG] Loaded {len(self.users)} users from database")
             except Exception as e:
-                print(f"❌ [DEBUG] Error loading users: {e}")
+                print(f"❌ [DEBUG] Error loading users from database: {e}")
                 self.users = {}
         else:
-            print("🔍 [DEBUG] Users file doesn't exist, creating empty users dict")
-            self.users = {}
-            self._save_users()
+            print(f"🔍 [DEBUG] Loading users from file: {self.users_file}")
+            if self.users_file.exists():
+                try:
+                    with open(self.users_file, 'r', encoding='utf-8') as f:
+                        self.users = json.load(f)
+                    print(f"✅ [DEBUG] Loaded {len(self.users)} users from file")
+                except Exception as e:
+                    print(f"❌ [DEBUG] Error loading users: {e}")
+                    self.users = {}
+            else:
+                print("🔍 [DEBUG] Users file doesn't exist, creating empty users dict")
+                self.users = {}
+                self._save_users()
     
     def _save_users(self):
-        """Save users to JSON file."""
-        try:
-            with open(self.users_file, 'w', encoding='utf-8') as f:
-                json.dump(self.users, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            print(f"Error saving users: {e}")
+        """Save users to database or file."""
+        if self.use_database:
+            print("🔍 [DEBUG] Using database - users are saved automatically")
+            # Database users are saved automatically via SQLAlchemy
+            return
+        else:
+            try:
+                with open(self.users_file, 'w', encoding='utf-8') as f:
+                    json.dump(self.users, f, indent=2, ensure_ascii=False)
+                print(f"✅ [DEBUG] Saved {len(self.users)} users to file")
+            except Exception as e:
+                print(f"❌ [DEBUG] Error saving users: {e}")
     
     def _hash_password(self, password: str) -> str:
         """Hash password using SHA-256."""
@@ -89,8 +120,22 @@ class UserAuth:
             return {"success": False, "error": "Password must be at least 6 characters"}
         
         # Check if user already exists
-        if username in self.users:
-            return {"success": False, "error": "Username already exists"}
+        if self.use_database:
+            try:
+                from database import User
+                from flask import current_app
+                
+                with current_app.app_context():
+                    existing_user = User.query.filter_by(username=username).first()
+                    if existing_user:
+                        print(f"🔍 [DEBUG] User {username} already exists in database")
+                        return {"success": False, "error": "Username already exists"}
+            except Exception as e:
+                print(f"❌ [DEBUG] Error checking user existence: {e}")
+                return {"success": False, "error": "Database error"}
+        else:
+            if username in self.users:
+                return {"success": False, "error": "Username already exists"}
         
         # Create user directory
         user_data_dir = BASE_DIR / "user_data" / username
@@ -153,17 +198,57 @@ class UserAuth:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
         
-        # Add user to users.json
-        self.users[username] = {
-            "password_hash": self._hash_password(password),
-            "email": email,
-            "created_at": datetime.now().isoformat(),
-            "last_login": None,
-            "data_directory": str(user_data_dir)
-        }
+        # Add user to database or file
+        if self.use_database:
+            print(f"🔍 [DEBUG] Saving user {username} to database")
+            try:
+                from database import User, UserBalance, db
+                from flask import current_app
+                
+                with current_app.app_context():
+                    # Create user in database
+                    new_user = User(
+                        username=username,
+                        password_hash=self._hash_password(password),
+                        email=email,
+                        created_at=datetime.now(),
+                        last_login=None,
+                        is_admin=False
+                    )
+                    db.session.add(new_user)
+                    db.session.flush()  # Get user ID
+                    
+                    # Create user balance
+                    user_balance = UserBalance(user_id=new_user.id, balance_rub=0.0)
+                    db.session.add(user_balance)
+                    
+                    db.session.commit()
+                    print(f"✅ [DEBUG] User {username} saved to database successfully")
+                    
+                    # Also add to memory for compatibility
+                    self.users[username] = {
+                        "password_hash": self._hash_password(password),
+                        "email": email,
+                        "created_at": datetime.now().isoformat(),
+                        "last_login": None,
+                        "data_directory": str(user_data_dir)
+                    }
+                    
+            except Exception as e:
+                print(f"❌ [DEBUG] Error saving user to database: {e}")
+                return {"success": False, "error": "Database error during registration"}
+        else:
+            # Add user to users.json (file mode)
+            self.users[username] = {
+                "password_hash": self._hash_password(password),
+                "email": email,
+                "created_at": datetime.now().isoformat(),
+                "last_login": None,
+                "data_directory": str(user_data_dir)
+            }
+            self._save_users()
         
-        self._save_users()
-        
+        print(f"✅ [DEBUG] User {username} registered successfully")
         return {"success": True, "message": "User registered successfully"}
     
     def login_user(self, username: str, password: str) -> Dict[str, Any]:
@@ -185,7 +270,14 @@ class UserAuth:
         
         # Regular user login
         if username not in self.users:
-            return {"success": False, "error": "Invalid username or password"}
+            print(f"🔍 [DEBUG] User {username} not found in memory, checking database...")
+            if self.use_database:
+                # Reload users from database
+                self._load_users()
+                if username not in self.users:
+                    return {"success": False, "error": "Invalid username or password"}
+            else:
+                return {"success": False, "error": "Invalid username or password"}
         
         user = self.users[username]
         if user["password_hash"] != self._hash_password(password):
@@ -193,6 +285,21 @@ class UserAuth:
         
         # Update last login
         user["last_login"] = datetime.now().isoformat()
+        
+        if self.use_database:
+            try:
+                from database import User, db
+                from flask import current_app
+                
+                with current_app.app_context():
+                    db_user = User.query.filter_by(username=username).first()
+                    if db_user:
+                        db_user.last_login = datetime.now()
+                        db.session.commit()
+                        print(f"✅ [DEBUG] Updated last login for {username} in database")
+            except Exception as e:
+                print(f"❌ [DEBUG] Error updating last login in database: {e}")
+        
         self._save_users()
         
         # Generate session token
