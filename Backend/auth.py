@@ -25,20 +25,33 @@ ADMIN_PASSWORD_HASH = "b94e20e6a1355e03db7ca65282836bd2ad92b8b975b3e2181f7baa6e6
 
 class UserAuth:
     def __init__(self):
+        print("🔍 [DEBUG] UserAuth initializing...")
+        print(f"🔍 [DEBUG] Users file path: {USERS_FILE}")
         self.users_file = USERS_FILE
         self.users_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Check if DATABASE_URL is available for potential DB usage
+        database_url = os.getenv('DATABASE_URL')
+        if database_url:
+            print("🔍 [DEBUG] DATABASE_URL detected - could use database for auth")
+        else:
+            print("🔍 [DEBUG] No DATABASE_URL - using file-based auth")
+            
         self._load_users()
     
     def _load_users(self):
         """Load users from JSON file."""
+        print(f"🔍 [DEBUG] Loading users from file: {self.users_file}")
         if self.users_file.exists():
             try:
                 with open(self.users_file, 'r', encoding='utf-8') as f:
                     self.users = json.load(f)
+                print(f"✅ [DEBUG] Loaded {len(self.users)} users from file")
             except Exception as e:
-                print(f"Error loading users: {e}")
+                print(f"❌ [DEBUG] Error loading users: {e}")
                 self.users = {}
         else:
+            print("🔍 [DEBUG] Users file doesn't exist, creating empty users dict")
             self.users = {}
             self._save_users()
     
@@ -63,6 +76,7 @@ class UserAuth:
         return username == ADMIN_USERNAME
     
     def register_user(self, username: str, password: str, email: str = "") -> Dict[str, Any]:
+        print(f"🔍 [DEBUG] Registering user: {username}")
         """Register a new user."""
         # Validate input
         if not username or not password:
@@ -154,6 +168,8 @@ class UserAuth:
     
     def login_user(self, username: str, password: str) -> Dict[str, Any]:
         """Login a user."""
+        print(f"🔍 [DEBUG] Login attempt for user: {username}")
+        print(f"🔍 [DEBUG] Current users in memory: {list(self.users.keys())}")
         # Check if this is admin login
         if username == ADMIN_USERNAME:
             if self._hash_password(password) == ADMIN_PASSWORD_HASH:

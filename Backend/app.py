@@ -24,6 +24,13 @@ from balance_manager import balance_manager
 # Load environment variables
 load_dotenv(override=True)
 
+# Debug environment variables
+try:
+    from check_env import check_environment
+    check_environment()
+except Exception as e:
+    print(f"🔍 [DEBUG] Could not run environment check: {e}")
+
 # Initialize Flask app
 app = Flask(__name__, 
             template_folder='../Frontend/templates',
@@ -34,8 +41,16 @@ CORS(app)
 app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 
 # Initialize database
-from database import init_database
-db = init_database(app)
+print("🚀 [DEBUG] Initializing database from app.py...")
+try:
+    from database import init_database
+    db = init_database(app)
+    print("🎉 [DEBUG] Database initialization from app.py completed!")
+except Exception as e:
+    print(f"💥 [DEBUG] Database initialization from app.py FAILED: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
 
 # Initialize services
 chatbot_service = chatbot_service
@@ -345,26 +360,35 @@ def contact():
 @app.route('/api/signup', methods=['POST'])
 def api_signup():
     """API endpoint for user registration."""
+    print("🔍 [DEBUG] API signup endpoint called")
     data = request.get_json()
     username = data.get('username', '').strip()
     password = data.get('password', '').strip()
     email = data.get('email', '').strip()
     
+    print(f"🔍 [DEBUG] Signup data - username: {username}, email: {email}")
     result = auth.register_user(username, password, email)
+    print(f"🔍 [DEBUG] Signup result: {result}")
     return jsonify(result)
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
     """API endpoint for user login."""
+    print("🔍 [DEBUG] API login endpoint called")
     data = request.get_json()
     username = data.get('username', '').strip()
     password = data.get('password', '').strip()
     
+    print(f"🔍 [DEBUG] Login attempt - username: {username}")
     result = auth.login_user(username, password)
+    print(f"🔍 [DEBUG] Login result: {result}")
     
     if result['success']:
         session['username'] = username
         session['user_data_dir'] = result['data_directory']
+        print(f"✅ [DEBUG] Session created for user: {username}")
+    else:
+        print(f"❌ [DEBUG] Login failed for user: {username}")
     
     return jsonify(result)
 

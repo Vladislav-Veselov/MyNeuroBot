@@ -109,44 +109,93 @@ class Transaction(db.Model):
 
 def init_database(app):
     """Initialize database with Flask app."""
+    print("🔍 [DEBUG] Starting database initialization...")
+    
     # Configure database URL
     database_url = os.getenv('DATABASE_URL')
+    print(f"🔍 [DEBUG] Raw DATABASE_URL: {database_url[:50] if database_url else 'None'}...")
+    
     if database_url and database_url.startswith('postgres://'):
         # Fix for SQLAlchemy 1.4+ compatibility
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        print("🔍 [DEBUG] Fixed postgres:// to postgresql://")
     
     if not database_url:
         # Fallback to SQLite for local development
         database_url = 'sqlite:///neurobot.db'
+        print("🔍 [DEBUG] No DATABASE_URL found, using SQLite fallback")
+    else:
+        print("🔍 [DEBUG] Using PostgreSQL database")
     
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    print(f"🔍 [DEBUG] SQLAlchemy URI configured: {database_url[:50]}...")
     
     # Initialize database
-    db.init_app(app)
+    try:
+        db.init_app(app)
+        print("✅ [DEBUG] SQLAlchemy initialized successfully")
+    except Exception as e:
+        print(f"❌ [DEBUG] SQLAlchemy initialization failed: {e}")
+        raise
     
     with app.app_context():
-        # Create all tables
-        db.create_all()
+        try:
+            # Test database connection (SQLAlchemy 2.0 compatible)
+            from sqlalchemy import text
+            db.session.execute(text("SELECT 1"))
+            print("✅ [DEBUG] Database connection test successful")
+        except Exception as e:
+            print(f"❌ [DEBUG] Database connection test failed: {e}")
+            raise
         
-        # Create admin user if not exists
-        admin_user = User.query.filter_by(username='admin').first()
-        if not admin_user:
-            from auth import ADMIN_PASSWORD_HASH
-            admin_user = User(
-                username='admin',
-                password_hash=ADMIN_PASSWORD_HASH,
-                email='admin@neurobot.local',
-                is_admin=True
-            )
-            db.session.add(admin_user)
+        try:
+            # Create all tables
+            db.create_all()
+            print("✅ [DEBUG] Database tables created successfully")
             
-            # Create admin balance
-            admin_balance = UserBalance(user=admin_user, balance_rub=1000.0)
-            db.session.add(admin_balance)
+            # List created tables
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            print(f"🔍 [DEBUG] Created tables: {tables}")
             
-            db.session.commit()
+        except Exception as e:
+            print(f"❌ [DEBUG] Table creation failed: {e}")
+            raise
+        
+        try:
+            # Create admin user if not exists
+            admin_user = User.query.filter_by(username='admin').first()
+            if not admin_user:
+                print("🔍 [DEBUG] Admin user not found, creating...")
+                from auth import ADMIN_PASSWORD_HASH
+                admin_user = User(
+                    username='admin',
+                    password_hash=ADMIN_PASSWORD_HASH,
+                    email='admin@neurobot.local',
+                    is_admin=True
+                )
+                db.session.add(admin_user)
+                
+                # Create admin balance
+                admin_balance = UserBalance(user=admin_user, balance_rub=1000.0)
+                db.session.add(admin_balance)
+                
+                db.session.commit()
+                print("✅ [DEBUG] Admin user created successfully")
+            else:
+                print("✅ [DEBUG] Admin user already exists")
+                
+            # Check total users count
+            user_count = User.query.count()
+            print(f"🔍 [DEBUG] Total users in database: {user_count}")
+            
+        except Exception as e:
+            print(f"❌ [DEBUG] Admin user creation failed: {e}")
+            raise
     
+    print("🎉 [DEBUG] Database initialization completed successfully!")
     return db
 
 def migrate_file_data_to_database():
