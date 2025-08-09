@@ -148,7 +148,16 @@ def get_current_kb_id() -> str:
         if current_kb_file.exists():
             with open(current_kb_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                return data.get('current_kb_id', 'default')
+                kb_id = data.get('current_kb_id', 'default')
+                
+                # Ensure the KB actually exists
+                kb_dir = user_data_dir / "knowledge_bases" / kb_id
+                if kb_dir.exists():
+                    return kb_id
+                else:
+                    # KB was deleted, fallback to default
+                    print(f"KB '{kb_id}' not found, falling back to default")
+                    return create_default_knowledge_base()
         else:
             # Create default KB if none exists
             return create_default_knowledge_base()
@@ -1374,10 +1383,14 @@ def create_knowledge_base():
         vector_dir = kb_dir / "vector_KB"
         vector_dir.mkdir(exist_ok=True)
         
+        # DO NOT automatically switch to the new KB
+        # Let user explicitly switch if they want to use it
+        
         return jsonify({
             'success': True,
             'kb_id': kb_id,
-            'kb_name': kb_name
+            'kb_name': kb_name,
+            'message': f'База знаний "{kb_name}" создана. Используйте переключатель для активации.'
         })
     except Exception as e:
         print(f"Error in create_knowledge_base: {str(e)}")
@@ -1403,6 +1416,29 @@ def switch_knowledge_base(kb_id):
         print(f"Error in switch_knowledge_base: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/knowledge-bases/reset-to-default', methods=['POST'])
+@login_required
+def reset_to_default_kb():
+    """API endpoint to reset to default knowledge base."""
+    try:
+        user_data_dir = get_current_user_data_dir()
+        
+        # Ensure default KB exists
+        create_default_knowledge_base()
+        
+        # Switch to default KB
+        with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
+            json.dump({'current_kb_id': 'default'}, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({
+            'success': True, 
+            'kb_id': 'default',
+            'message': 'Переключено на базу знаний по умолчанию'
+        })
+    except Exception as e:
+        print(f"Error in reset_to_default_kb: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/knowledge-bases/<kb_id>', methods=['DELETE'])
 @login_required
 def delete_knowledge_base(kb_id):
@@ -1417,7 +1453,9 @@ def delete_knowledge_base(kb_id):
         # Check if this is the current KB
         current_kb_id = get_current_kb_id()
         if kb_id == current_kb_id:
-            return jsonify({'error': 'Нельзя удалить активную базу знаний'}), 400
+            # Switch to default KB before deleting
+            with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
+                json.dump({'current_kb_id': 'default'}, f, ensure_ascii=False, indent=2)
         
         # Delete the KB directory
         import shutil
