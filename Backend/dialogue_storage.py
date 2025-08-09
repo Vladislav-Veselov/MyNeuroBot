@@ -14,6 +14,7 @@ class DialogueStorage:
             storage_file: JSON file to store all dialogue sessions
         """
         self.storage_file = Path(storage_file)
+        self._pending_sessions = {}  # Initialize pending sessions storage
         self._ensure_storage_file()
     
     def _ensure_storage_file(self):
@@ -54,7 +55,7 @@ class DialogueStorage:
     
     def create_session(self, ip_address: str = None, kb_id: str = None, kb_name: str = None) -> str:
         """
-        Create a new dialogue session.
+        Create a new dialogue session (pending - not stored until first message).
         
         Args:
             ip_address: IP address of the client (optional)
@@ -64,6 +65,9 @@ class DialogueStorage:
         Returns:
             Session ID (UUID string)
         """
+        # Clean up old pending sessions periodically
+        self.cleanup_pending_sessions()
+        
         session_id = str(uuid.uuid4())
         session_data = {
             "session_id": session_id,
@@ -76,20 +80,14 @@ class DialogueStorage:
                 "potential_client": None,
                 "ip_address": ip_address,
                 "kb_id": kb_id,
-                "kb_name": kb_name
+                "kb_name": kb_name,
+                "pending": True  # Mark as pending until first message
             }
         }
         
-        # Load current data
-        all_data = self._load_all_sessions()
+        # Store the pending session temporarily (will be moved to main storage when first message is added)
+        self._pending_sessions[session_id] = session_data
         
-        # Add new session
-        all_data["sessions"][session_id] = session_data
-        all_data["metadata"]["total_sessions"] = len(all_data["sessions"])
-        all_data["metadata"]["last_updated"] = datetime.now().isoformat()
-        
-        # Save updated data
-        self._save_all_sessions(all_data)
         return session_id
     
     def add_message(self, session_id: str, role: str, content: str) -> bool:
@@ -107,10 +105,19 @@ class DialogueStorage:
         try:
             all_data = self._load_all_sessions()
             
-            if session_id not in all_data["sessions"]:
-                return False
-            
-            session_data = all_data["sessions"][session_id]
+            # Check if session exists in main storage
+            if session_id in all_data["sessions"]:
+                session_data = all_data["sessions"][session_id]
+            else:
+                # Check if session exists in pending storage
+                if session_id in self._pending_sessions:
+                    # Move session from pending to main storage
+                    session_data = self._pending_sessions[session_id]
+                    session_data["metadata"]["pending"] = False
+                    all_data["sessions"][session_id] = session_data
+                    del self._pending_sessions[session_id]
+                else:
+                    return False
             
             message = {
                 "id": str(uuid.uuid4()),
@@ -131,6 +138,7 @@ class DialogueStorage:
             
             # Update global metadata
             all_data["metadata"]["last_updated"] = datetime.now().isoformat()
+            all_data["metadata"]["total_sessions"] = len(all_data["sessions"])
             
             self._save_all_sessions(all_data)
             return True
@@ -151,7 +159,17 @@ class DialogueStorage:
         """
         try:
             all_data = self._load_all_sessions()
-            return all_data["sessions"].get(session_id)
+            
+            # Check main storage first
+            if session_id in all_data["sessions"]:
+                return all_data["sessions"][session_id]
+            
+            # Check pending sessions
+            if session_id in self._pending_sessions:
+                return self._pending_sessions[session_id]
+            
+            return None
+            
         except Exception as e:
             print(f"Error getting session {session_id}: {str(e)}")
             return None
@@ -340,9 +358,14 @@ class DialogueStorage:
         try:
             all_data = self._load_all_sessions()
             
-            # Find sessions with matching IP address
+            # Find sessions with matching IP address in main storage
             matching_sessions = []
             for session_id, session_data in all_data["sessions"].items():
+                if session_data["metadata"].get("ip_address") == ip_address:
+                    matching_sessions.append((session_id, session_data))
+            
+            # Check pending sessions
+            for session_id, session_data in self._pending_sessions.items():
                 if session_data["metadata"].get("ip_address") == ip_address:
                     matching_sessions.append((session_id, session_data))
             
@@ -359,6 +382,43 @@ class DialogueStorage:
         except Exception as e:
             print(f"Error getting session by IP {ip_address}: {str(e)}")
             return None
+
+    def cleanup_pending_sessions(self, max_age_hours: int = 24) -> int:
+        """
+        Clean up pending sessions that are older than the specified age.
+        
+        Args:
+            max_age_hours: Maximum age in hours for pending sessions
+            
+        Returns:
+            Number of sessions cleaned up
+        """
+        try:
+            from datetime import datetime, timedelta
+            
+            if not self._pending_sessions:
+                return 0
+            
+            cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
+            sessions_to_remove = []
+            
+            for session_id, session_data in self._pending_sessions.items():
+                created_at = datetime.fromisoformat(session_data["created_at"])
+                if created_at < cutoff_time:
+                    sessions_to_remove.append(session_id)
+            
+            # Remove old pending sessions
+            for session_id in sessions_to_remove:
+                del self._pending_sessions[session_id]
+            
+            if sessions_to_remove:
+                print(f"Cleaned up {len(sessions_to_remove)} old pending sessions")
+            
+            return len(sessions_to_remove)
+            
+        except Exception as e:
+            print(f"Error cleaning up pending sessions: {str(e)}")
+            return 0
 
 # Global instance - will be initialized per user
 dialogue_storage = None

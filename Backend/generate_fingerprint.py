@@ -4,9 +4,10 @@ import json
 import hashlib
 from pathlib import Path
 
-# adjust this path to wherever your knowledge.txt lives
-KNOWLEDGE_FILE = Path(r"C:\PARTNERS\NeuroBot\user_data\admin\knowledge.txt")
-FINGERPRINT_FILE = Path(r"C:\PARTNERS\NeuroBot\user_data\admin\last_fingerprint.json")
+# Use relative paths for production deployment
+BASE_DIR = Path(__file__).resolve().parent.parent
+KNOWLEDGE_FILE = BASE_DIR / "user_data" / "admin" / "knowledge.txt"
+FINGERPRINT_FILE = BASE_DIR / "user_data" / "admin" / "last_fingerprint.json"
 
 def compute_document_hash(content: str) -> str:
     """Compute a SHA-256 hash for a document block."""

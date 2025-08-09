@@ -1,0 +1,33 @@
+{
+  "models": {
+    "gpt-4o": {
+      "name": "PRO",
+      "description": "PRO (более мощный и точный)",
+      "input_price_per_1k_tokens": 0.005,
+      "output_price_per_1k_tokens": 0.015,
+      "currency": "USD",
+      "max_tokens": 128000,
+      "context_window": 128000
+    },
+    "gpt-4o-mini": {
+      "name": "LITE",
+      "description": "LITE (быстрый и экономичный)",
+      "input_price_per_1k_tokens": 0.00015,
+      "output_price_per_1k_tokens": 0.0006,
+      "currency": "USD",
+      "max_tokens": 128000,
+      "context_window": 128000
+    }
+  },
+  "last_updated": "2025-08-09T13:53:55.069922+03:00",
+  "source": "OpenAI Pricing (Auto-fetched)",
+  "notes": "Prices are per 1K tokens. Input tokens are what you send to the model, output tokens are what the model generates. Updated automatically every 24 hours.",
+  "exchange_rates": {
+    "USD_to_RUB": 79.93,
+    "RUB_to_USD": 0.0125,
+    "last_updated": "2025-08-09T13:53:55.067913+03:00",
+    "source": "Exchange Rate API"
+  },
+  "markup_coefficient": 1.7,
+  "markup_notes": "Final cost is multiplied by 1.7 (70% markup)"
+}

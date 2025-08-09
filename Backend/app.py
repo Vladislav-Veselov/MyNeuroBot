@@ -13,21 +13,25 @@ from dotenv import load_dotenv
 from chatbot_service import chatbot_service
 from dialogue_storage import get_dialogue_storage
 from session_manager import ip_session_manager
+from data_masking import data_masker
 from openai import OpenAI
-from auth import auth, login_required, login_required_web, get_current_user_data_dir
+from auth import auth, login_required, login_required_web, get_current_user_data_dir, admin_required, admin_required_web
 from datetime import datetime
+from chatbot_status_manager import chatbot_status_manager
+from model_manager import model_manager
+from balance_manager import balance_manager
 
 # Load environment variables
 load_dotenv(override=True)
 
 # Initialize Flask app
 app = Flask(__name__, 
-            template_folder=r'C:\PARTNERS\NeuroBot\Frontend\templates',
-            static_folder=r'C:\PARTNERS\NeuroBot\Frontend\static')
+            template_folder='../Frontend/templates',
+            static_folder='../Frontend/static')
 CORS(app)
 
 # Configure session
-app.secret_key = "your-secret-key-change-this-in-production"
+app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 
 # Initialize services
 chatbot_service = chatbot_service
@@ -64,6 +68,38 @@ def find_kb_by_password(password: str) -> Optional[str]:
         print(f"Error finding KB by password: {str(e)}")
         return None
 
+def update_kb_document_count(kb_id: str) -> int:
+    """Update the document count for a specific knowledge base."""
+    try:
+        user_data_dir = get_current_user_data_dir()
+        kb_dir = user_data_dir / "knowledge_bases" / kb_id
+        kb_info_file = kb_dir / "kb_info.json"
+        knowledge_file = kb_dir / "knowledge.txt"
+        
+        # Count actual documents
+        document_count = 0
+        if knowledge_file.exists():
+            documents = parse_knowledge_file(kb_id)
+            document_count = len(documents)
+        
+        # Update KB info
+        if kb_info_file.exists():
+            with open(kb_info_file, 'r', encoding='utf-8') as f:
+                kb_info = json.load(f)
+        else:
+            kb_info = {}
+        
+        kb_info['document_count'] = document_count
+        kb_info['updated_at'] = datetime.now().isoformat()
+        
+        with open(kb_info_file, 'w', encoding='utf-8') as f:
+            json.dump(kb_info, f, ensure_ascii=False, indent=2)
+        
+        return document_count
+    except Exception as e:
+        print(f"Error updating document count for KB {kb_id}: {str(e)}")
+        return 0
+
 def get_knowledge_bases() -> List[Dict[str, Any]]:
     """Get list of knowledge bases for current user."""
     try:
@@ -76,16 +112,21 @@ def get_knowledge_bases() -> List[Dict[str, Any]]:
         kb_list = []
         for kb_folder in kb_dir.iterdir():
             if kb_folder.is_dir():
+                kb_id = kb_folder.name
                 kb_info_file = kb_folder / "kb_info.json"
                 if kb_info_file.exists():
                     with open(kb_info_file, 'r', encoding='utf-8') as f:
                         kb_info = json.load(f)
+                    
+                    # Update document count to ensure it's accurate
+                    actual_document_count = update_kb_document_count(kb_id)
+                    
                     kb_list.append({
-                        'id': kb_folder.name,
-                        'name': kb_info.get('name', kb_folder.name),
+                        'id': kb_id,
+                        'name': kb_info.get('name', kb_id),
                         'created_at': kb_info.get('created_at', ''),
                         'updated_at': kb_info.get('updated_at', ''),
-                        'document_count': kb_info.get('document_count', 0),
+                        'document_count': actual_document_count,
                         'analyze_clients': kb_info.get('analyze_clients', True)  # Default to True for backward compatibility
                     })
         
@@ -129,7 +170,7 @@ def create_default_knowledge_base() -> str:
         
         # Create KB info
         kb_info = {
-            'name': 'Основная база знаний',
+            'name': 'База знаний для клиентов',
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat(),
             'document_count': 0,
@@ -138,6 +179,9 @@ def create_default_knowledge_base() -> str:
         
         with open(default_kb_dir / "kb_info.json", 'w', encoding='utf-8') as f:
             json.dump(kb_info, f, ensure_ascii=False, indent=2)
+        
+        # Update document count to ensure it's accurate
+        update_kb_document_count(default_kb_id)
         
         # Create empty knowledge file
         with open(default_kb_dir / "knowledge.txt", 'w', encoding='utf-8') as f:
@@ -273,6 +317,12 @@ def settings():
     """Render the settings page."""
     return render_template('settings.html')
 
+@app.route('/balance')
+@login_required_web
+def balance():
+    """Render the balance page."""
+    return render_template('balance.html')
+
 @app.route('/contact')
 @login_required_web
 def contact():
@@ -405,10 +455,14 @@ def add_qa():
     new_block = f"Вопрос: {question}\n{answer}\n\n"
     try:
         user_data_dir = get_current_user_data_dir()
+        current_kb_id = get_current_kb_id()
         knowledge_file = get_knowledge_file_path()
         
         with open(knowledge_file, 'a', encoding='utf-8') as f:
             f.write(new_block)
+        
+        # Update document count
+        update_kb_document_count(current_kb_id)
         
         # Rebuild vector store after adding new Q&A
         rebuild_vector_store()
@@ -423,7 +477,6 @@ def save_knowledge_file(documents: List[Dict[str, Any]]) -> None:
         user_data_dir = get_current_user_data_dir()
         current_kb_id = get_current_kb_id()
         knowledge_file = get_knowledge_file_path()
-        kb_info_file = user_data_dir / "knowledge_bases" / current_kb_id / "kb_info.json"
         
         content = '\n\n'.join(
             f"Вопрос: {doc['question']}\n{doc['answer']}"
@@ -433,18 +486,8 @@ def save_knowledge_file(documents: List[Dict[str, Any]]) -> None:
         with open(knowledge_file, 'w', encoding='utf-8') as f:
             f.write(content + '\n\n')  # Add final newlines for consistency
         
-        # Update KB info
-        if kb_info_file.exists():
-            with open(kb_info_file, 'r', encoding='utf-8') as f:
-                kb_info = json.load(f)
-        else:
-            kb_info = {}
-        
-        kb_info['updated_at'] = datetime.now().isoformat()
-        kb_info['document_count'] = len(documents)
-        
-        with open(kb_info_file, 'w', encoding='utf-8') as f:
-            json.dump(kb_info, f, ensure_ascii=False, indent=2)
+        # Update document count using the new function
+        update_kb_document_count(current_kb_id)
     except Exception as e:
         print(f"Error saving knowledge file: {str(e)}")
 
@@ -642,11 +685,27 @@ def analyze_unread_sessions_for_potential_clients():
                             print(f"Skipping analysis for session {session_id} - KB {kb_id} has analyze_clients=False")
                             continue
             
-            # Prepare conversation text for analysis
+            # Prepare conversation text for analysis with data masking
             conversation_text = ""
+            masked_items_count = 0
+            
             for message in full_session['messages']:
                 role = "Пользователь" if message['role'] == 'user' else "Бот"
-                conversation_text += f"{role}: {message['content']}\n"
+                
+                # Apply data masking to user messages only
+                if message['role'] == 'user':
+                    masked_content, mask_info = data_masker.mask_all_personal_data(message['content'])
+                    masked_items_count += mask_info.get('total_masked', 0)
+                    conversation_text += f"{role}: {masked_content}\n"
+                else:
+                    # Bot messages don't need masking
+                    conversation_text += f"{role}: {message['content']}\n"
+            
+            # Log masking information if any personal data was found
+            if masked_items_count > 0:
+                print(f"\n🔒 PERSONAL DATA MASKED DURING CLIENT ANALYSIS:")
+                print(f"   Session ID: {session_id}")
+                print(f"   Total masked items: {masked_items_count}")
             
             # Analyze with OpenAI
             analysis_prompt = f"""
@@ -665,7 +724,7 @@ def analyze_unread_sessions_for_potential_clients():
             
             try:
                 response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
+                    model="gpt-4o-mini",
                     messages=[
                         {"role": "system", "content": "Ты - аналитик, который определяет потенциальных клиентов на основе диалогов с чат-ботом. Отвечай только ДА или НЕТ."},
                         {"role": "user", "content": analysis_prompt}
@@ -676,6 +735,15 @@ def analyze_unread_sessions_for_potential_clients():
                 
                 result = response.choices[0].message.content.strip().upper()
                 is_potential_client = result == "ДА"
+                
+                # Track token usage for balance
+                try:
+                    input_tokens = response.usage.prompt_tokens
+                    output_tokens = response.usage.completion_tokens
+                    balance_manager.consume_tokens(input_tokens, output_tokens, "gpt-4o-mini", "client_analysis")
+                    print(f"Token usage tracked for client analysis: {input_tokens} input, {output_tokens} output tokens")
+                except Exception as e:
+                    print(f"Error tracking token usage for client analysis: {e}")
                 
                 # Mark the session accordingly
                 dialogue_storage.mark_session_as_potential_client(session_id, is_potential_client)
@@ -904,6 +972,15 @@ def chatbot_api():
         
         if not message:
             return jsonify({'error': 'Сообщение не может быть пустым'}), 400
+        
+        # Check if chatbots are stopped
+        if chatbot_status_manager.is_chatbot_stopped():
+            stop_message = chatbot_status_manager.get_stop_message()
+            return jsonify({
+                'success': False,
+                'error': stop_message,
+                'chatbot_stopped': True
+            }), 503
         
         # Check for password-based KB switching
         if message == "__RESET__":
@@ -1286,6 +1363,9 @@ def create_knowledge_base():
         with open(kb_dir / "knowledge.txt", 'w', encoding='utf-8') as f:
             f.write("")
         
+        # Update document count to ensure it's accurate
+        update_kb_document_count(kb_id)
+        
         # Create vector store directory
         vector_dir = kb_dir / "vector_KB"
         vector_dir.mkdir(exist_ok=True)
@@ -1458,7 +1538,7 @@ def change_kb_analyze_clients(kb_id):
 @app.route('/Backend/<path:filename>')
 def backend_static(filename):
     """Serve static files from the Backend folder."""
-    backend_dir = Path(r"C:\PARTNERS\NeuroBot\Backend")
+    backend_dir = Path(__file__).resolve().parent
     file_path = backend_dir / filename
     print(f"Requested file: {filename}")
     print(f"Full path: {file_path}")
@@ -1468,7 +1548,7 @@ def backend_static(filename):
 @app.route('/test-logo')
 def test_logo():
     """Test route to check if logo file exists."""
-    logo_path = Path(r"C:\PARTNERS\NeuroBot\Frontend\static\logo.png")
+    logo_path = Path(__file__).resolve().parent.parent / "Frontend" / "static" / "logo.png"
     return jsonify({
         'logo_exists': logo_path.exists(),
         'logo_path': str(logo_path),
@@ -1512,5 +1592,259 @@ def get_knowledge_base_details(kb_id):
         print(f"Error in get_knowledge_base_details: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/chatbot/status', methods=['GET'])
+@login_required
+def get_chatbot_status():
+    """API endpoint to get current chatbot status."""
+    try:
+        status = chatbot_status_manager.get_chatbot_status()
+        return jsonify({
+            'success': True,
+            'status': status
+        })
+    except Exception as e:
+        print(f"Error in get_chatbot_status: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/chatbot/stop', methods=['POST'])
+@login_required
+def stop_chatbots():
+    """API endpoint to stop all chatbots for the current user."""
+    try:
+        data = request.get_json() or {}
+        message = data.get('message', 'Чатбот временно остановлен')
+        
+        success = chatbot_status_manager.stop_chatbots(message=message)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Чатботы успешно остановлены'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Ошибка при остановке чатботов'
+            }), 500
+    except Exception as e:
+        print(f"Error in stop_chatbots: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/chatbot/start', methods=['POST'])
+@login_required
+def start_chatbots():
+    """API endpoint to start all chatbots for the current user."""
+    try:
+        success = chatbot_status_manager.start_chatbots()
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Чатботы успешно запущены'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Ошибка при запуске чатботов'
+            }), 500
+    except Exception as e:
+        print(f"Error in start_chatbots: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/model/config', methods=['GET'])
+@login_required
+def get_model_config():
+    """API endpoint to get current model configuration."""
+    try:
+        config = model_manager.get_model_config()
+        return jsonify({
+            'success': True,
+            'config': config
+        })
+    except Exception as e:
+        print(f"Error in get_model_config: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/model/set', methods=['POST'])
+@login_required
+def set_model():
+    """API endpoint to set the model for the current user."""
+    try:
+        data = request.get_json() or {}
+        model = data.get('model')
+        
+        if not model:
+            return jsonify({
+                'success': False,
+                'error': 'Модель не указана'
+            }), 400
+        
+        success = model_manager.set_model(model)
+        
+        if success:
+            # Refresh balance to update the current model
+            balance_manager.refresh_balance_model()
+            
+            config = model_manager.get_model_config()
+            return jsonify({
+                'success': True,
+                'message': f'Модель изменена на {config["current_model_name"]}',
+                'config': config
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Ошибка при изменении модели'
+            }), 500
+    except Exception as e:
+        print(f"Error in set_model: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/balance', methods=['GET'])
+@login_required
+def get_balance():
+    """API endpoint to get current balance information."""
+    try:
+        balance_data = balance_manager.get_balance()
+        return jsonify({
+            'success': True,
+            'balance': balance_data
+        })
+    except Exception as e:
+        print(f"Error in get_balance: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/balance/transactions', methods=['GET'])
+@login_required
+def get_transactions():
+    """API endpoint to get recent transactions."""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        transactions = balance_manager.get_transactions(limit)
+        return jsonify({
+            'success': True,
+            'transactions': transactions
+        })
+    except Exception as e:
+        print(f"Error in get_transactions: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Admin routes
+@app.route('/admin')
+@admin_required_web
+def admin_panel():
+    """Render the admin panel page."""
+    return render_template('admin.html')
+
+@app.route('/api/admin/users', methods=['GET'])
+@admin_required
+def admin_get_users():
+    """API endpoint to get all users (admin only)."""
+    try:
+        users = auth.get_all_users()
+        return jsonify({
+            'success': True,
+            'users': users
+        })
+    except Exception as e:
+        print(f"Error in admin_get_users: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/balances', methods=['GET'])
+@admin_required
+def admin_get_all_balances():
+    """API endpoint to get all user balances (admin only)."""
+    try:
+        result = balance_manager.admin_get_all_balances()
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in admin_get_all_balances: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/balance/increase', methods=['POST'])
+@admin_required
+def admin_increase_balance():
+    """API endpoint to increase user balance (admin only)."""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        amount_rub = data.get('amount_rub', 0.0)
+        reason = data.get('reason', 'Manual balance increase')
+        
+        if not username:
+            return jsonify({'success': False, 'error': 'Username is required'}), 400
+        
+        if amount_rub <= 0:
+            return jsonify({'success': False, 'error': 'Amount must be positive'}), 400
+        
+        result = balance_manager.admin_increase_balance(username, amount_rub, reason)
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"Error in admin_increase_balance: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/user/<username>/balance', methods=['GET'])
+@admin_required
+def admin_get_user_balance(username):
+    """API endpoint to get specific user balance (admin only)."""
+    try:
+        if not auth.user_exists(username):
+            return jsonify({'success': False, 'error': f'User {username} does not exist'}), 404
+        
+        balance_data = balance_manager.get_balance(username)
+        transactions = balance_manager.get_transactions(10, username)  # Last 10 transactions
+        
+        return jsonify({
+            'success': True,
+            'balance': balance_data,
+            'recent_transactions': transactions
+        })
+    except Exception as e:
+        print(f"Error in admin_get_user_balance: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/knowledge-bases/check-password', methods=['POST'])
+@login_required
+def check_kb_password():
+    """API endpoint to check if a password is already used by any KB."""
+    try:
+        data = request.get_json()
+        password = (data.get('password') or '').strip()
+        
+        if not password:
+            return jsonify({'error': 'Пожалуйста, введите пароль.'}), 400
+        
+        # Check if password is already used by any KB
+        user_data_dir = get_current_user_data_dir()
+        kb_dir = user_data_dir / "knowledge_bases"
+        
+        if not kb_dir.exists():
+            return jsonify({'is_unique': True})
+        
+        for kb_folder in kb_dir.iterdir():
+            if kb_folder.is_dir():
+                password_file = kb_folder / "password.txt"
+                if password_file.exists():
+                    with open(password_file, 'r', encoding='utf-8') as f:
+                        kb_password = f.read().strip()
+                    if kb_password == password:
+                        return jsonify({'is_unique': False, 'error': 'Пароль уже используется в другой базе знаний'})
+        
+        return jsonify({'is_unique': True})
+    except Exception as e:
+        print(f"Error in check_kb_password: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5001) 
+    # Check if we're in production (Render sets PORT environment variable)
+    port = int(os.environ.get('PORT', 5001))
+    debug_mode = os.environ.get('FLASK_ENV') != 'production'
+    
+    if debug_mode:
+        # Development mode - use Flask's built-in server
+        # Use localhost only to avoid the warning and multiple addresses
+        app.run(debug=True, host='127.0.0.1', port=port)
+    else:
+        # Production mode - use Gunicorn (this should be called by gunicorn)
+        app.run(host='0.0.0.0', port=port, debug=False) 

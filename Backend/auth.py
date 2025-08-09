@@ -19,6 +19,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 USERS_FILE = BASE_DIR / "user_data" / "users.json"
 SESSION_SECRET = "your-secret-key-change-this-in-production"
 
+# Admin configuration - CHANGE THESE TO YOUR CREDENTIALS
+ADMIN_USERNAME = "admin"  # Change this to your admin username
+ADMIN_PASSWORD_HASH = "b94e20e6a1355e03db7ca65282836bd2ad92b8b975b3e2181f7baa6e6a8a9a5f"  # Password: linoleum787898!
+
 class UserAuth:
     def __init__(self):
         self.users_file = USERS_FILE
@@ -54,6 +58,10 @@ class UserAuth:
         """Generate a secure session token."""
         return secrets.token_urlsafe(32)
     
+    def is_admin(self, username: str) -> bool:
+        """Check if user is admin."""
+        return username == ADMIN_USERNAME
+    
     def register_user(self, username: str, password: str, email: str = "") -> Dict[str, Any]:
         """Register a new user."""
         # Validate input
@@ -85,7 +93,7 @@ class UserAuth:
         
         # Create KB info
         kb_info = {
-            'name': 'Основная база знаний',
+            'name': 'База знаний для клиентов',
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat(),
             'document_count': 0,
@@ -146,6 +154,20 @@ class UserAuth:
     
     def login_user(self, username: str, password: str) -> Dict[str, Any]:
         """Login a user."""
+        # Check if this is admin login
+        if username == ADMIN_USERNAME:
+            if self._hash_password(password) == ADMIN_PASSWORD_HASH:
+                return {
+                    "success": True,
+                    "username": username,
+                    "session_token": self._generate_session_token(),
+                    "data_directory": str(BASE_DIR / "user_data" / "admin"),
+                    "is_admin": True
+                }
+            else:
+                return {"success": False, "error": "Invalid username or password"}
+        
+        # Regular user login
         if username not in self.users:
             return {"success": False, "error": "Invalid username or password"}
         
@@ -164,22 +186,35 @@ class UserAuth:
             "success": True,
             "username": username,
             "session_token": session_token,
-            "data_directory": user["data_directory"]
+            "data_directory": user["data_directory"],
+            "is_admin": False
         }
     
     def get_user_data_directory(self, username: str) -> Optional[Path]:
         """Get the data directory for a specific user."""
+        if username == ADMIN_USERNAME:
+            return BASE_DIR / "user_data" / "admin"
         if username in self.users:
             return Path(self.users[username]["data_directory"])
         return None
     
     def user_exists(self, username: str) -> bool:
         """Check if a user exists."""
-        return username in self.users
+        return username == ADMIN_USERNAME or username in self.users
     
     def get_all_users(self) -> Dict[str, Any]:
         """Get all users (for admin purposes)."""
-        return {username: {**user, "password_hash": "***"} for username, user in self.users.items()}
+        users_copy = {username: {**user, "password_hash": "***"} for username, user in self.users.items()}
+        # Add admin user
+        users_copy[ADMIN_USERNAME] = {
+            "password_hash": "***",
+            "email": "",
+            "created_at": "admin",
+            "last_login": None,
+            "data_directory": str(BASE_DIR / "user_data" / "admin"),
+            "is_admin": True
+        }
+        return users_copy
 
 # Global auth instance
 auth = UserAuth()
@@ -193,12 +228,34 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def admin_required(f):
+    """Decorator to require admin privileges for routes."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session:
+            return jsonify({"error": "Login required"}), 401
+        if not auth.is_admin(session['username']):
+            return jsonify({"error": "Admin privileges required"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
 def login_required_web(f):
     """Decorator to require login for web routes (redirects to login page)."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'username' not in session:
             return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required_web(f):
+    """Decorator to require admin privileges for web routes."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session:
+            return redirect(url_for('login'))
+        if not auth.is_admin(session['username']):
+            return redirect(url_for('home'))
         return f(*args, **kwargs)
     return decorated_function
 

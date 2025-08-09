@@ -12,6 +12,8 @@ from langchain_openai import OpenAIEmbeddings
 from dialogue_storage import get_dialogue_storage
 from session_manager import ip_session_manager
 from data_masking import data_masker
+from model_manager import model_manager
+from balance_manager import balance_manager
 
 # Load environment variables
 load_dotenv(override=True)
@@ -251,6 +253,7 @@ class ChatbotService:
 1. Отвечай ТОЛЬКО на основе предоставленной информации из базы знаний
 2. Если в базе знаний нет информации по вопросу, честно скажи об этом
 3. Не выдумывай информацию
+4. Если в сообщении есть маскированные данные, это значит, что пользователь отправил личные контакты. Сообщи пользователю, что контакты сохранены.
 
 ## ADDITIONAL INSTRUCTIONS
 {additional_prompt if additional_prompt else 'Нет дополнительных инструкций'}
@@ -374,13 +377,25 @@ class ChatbotService:
                 print("-" * 100)
             print("================================================")
             
+            # Get the current model for the user
+            current_model = model_manager.get_current_model()
+            
             # Call OpenAI API
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=current_model,
                 messages=messages
             )
             
             bot_response = response.choices[0].message.content.strip()
+            
+            # Track token usage for balance
+            try:
+                input_tokens = response.usage.prompt_tokens
+                output_tokens = response.usage.completion_tokens
+                balance_manager.consume_tokens(input_tokens, output_tokens, current_model, "chatbot")
+                print(f"Token usage tracked: {input_tokens} input, {output_tokens} output tokens")
+            except Exception as e:
+                print(f"Error tracking token usage: {e}")
             
             # Update conversation history with original (unmasked) user message
             self.conversation_history.append({"role": "user", "content": user_message})
