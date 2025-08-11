@@ -8,12 +8,15 @@ import json
 import hashlib
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 # Configuration
 BASE_DIR = Path(__file__).resolve().parent.parent
 USERS_FILE = BASE_DIR / "user_data" / "users.json"
 USERNAME = "alexey123"
 PASSWORD = "tlnzl*4920"
+
+from session_manager import ip_session_manager
 
 def hash_password(password: str) -> str:
     """Hash password using SHA-256."""
