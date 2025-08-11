@@ -7,7 +7,6 @@ This service handles user-specific sessions and knowledge bases properly.
 import os
 import json
 import re
-import hashlib
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 from openai import OpenAI
@@ -16,6 +15,7 @@ import faiss
 import numpy as np
 from langchain_openai import OpenAIEmbeddings
 from dialogue_storage import get_dialogue_storage
+from session_manager import ip_session_manager
 from data_masking import data_masker
 from model_manager import model_manager
 from balance_manager import balance_manager
@@ -38,7 +38,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 class StandaloneChatbotService:
     def __init__(self):
         self.embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-        # Remove in-memory session storage - we'll use persistent storage instead
+        # Используем тот же подход, что и основной бот - без локального хранения сессий
         
     def get_user_data_directory(self, username: str) -> Path:
         """Get the data directory for a specific user."""
@@ -320,77 +320,62 @@ class StandaloneChatbotService:
         
         return base_prompt
     
-    def get_or_create_session(self, username: str) -> str:
-        """Get existing session or create new one for user with persistent storage."""
+    def get_or_create_session(self, username: str, client_ip: str) -> str:
+        """Get existing session or create new one for IP address - exactly like main bot."""
         try:
             dialogue_storage = get_dialogue_storage()
-            kb_id = self.get_current_kb_id(username)
             
-            # Get KB name
-            try:
-                user_data_dir = self.get_user_data_directory(username)
-                kb_dir = user_data_dir / "knowledge_bases" / kb_id
-                kb_info_file = kb_dir / "kb_info.json"
-                kb_name = kb_id
-                if kb_info_file.exists():
-                    with open(kb_info_file, 'r', encoding='utf-8') as f:
-                        kb_info = json.load(f)
-                        kb_name = kb_info.get('name', kb_id)
-            except Exception as e:
-                print(f"Error getting KB name: {str(e)}")
-                kb_name = kb_id
+            # Используем точно такой же подход, как основной бот
+            # Enforce 1 session per IP: always check storage for existing session for this IP
+            existing_session = dialogue_storage.get_session_by_ip(client_ip)
             
-            # Create a deterministic session ID based on username and KB
-            # This ensures the same session is used across service restarts
-            session_key = f"standalone_{username}_{kb_id}"
-            session_id = hashlib.md5(session_key.encode()).hexdigest()
-            
-            # Check if session already exists in dialogue storage
-            existing_session = dialogue_storage.get_session(session_id)
-            if existing_session is None:
-                # Create new persistent session manually with our deterministic ID
-                print(f"Creating new persistent session for user {username} with KB {kb_id}")
-                from datetime import datetime
-                current_time = datetime.now().isoformat()
-                all_data = dialogue_storage._load_all_sessions()
-                session_data = {
-                    "session_id": session_id,
-                    "created_at": current_time,
-                    "messages": [],
-                    "metadata": {
-                        "total_messages": 0,
-                        "last_updated": current_time,
-                        "unread": True,
-                        "potential_client": None,
-                        "ip_address": f"standalone_{username}",
-                        "kb_id": kb_id,
-                        "kb_name": kb_name,
-                        "pending": False
-                    }
-                }
-                all_data["sessions"][session_id] = session_data
-                dialogue_storage._save_all_sessions(all_data)
-                print(f"Created persistent session {session_id} for user {username}")
+            if existing_session:
+                # Используем существующую сессию для этого IP
+                session_id = existing_session['session_id']
+                print(f"Using existing session {session_id} for IP {client_ip}")
+                return session_id
             else:
-                print(f"Using existing session {session_id} for user {username}")
-            
-            return session_id
-            
+                # No session for this IP, create one with KB info
+                kb_id = self.get_current_kb_id(username)
+                
+                # Get KB name
+                try:
+                    user_data_dir = self.get_user_data_directory(username)
+                    kb_dir = user_data_dir / "knowledge_bases" / kb_id
+                    kb_info_file = kb_dir / "kb_info.json"
+                    kb_name = kb_id
+                    if kb_info_file.exists():
+                        with open(kb_info_file, 'r', encoding='utf-8') as f:
+                            kb_info = json.load(f)
+                            kb_name = kb_info.get('name', kb_id)
+                except Exception as e:
+                    print(f"Error getting KB name: {str(e)}")
+                    kb_name = kb_id
+                
+                # Создаем новую сессию точно так же, как основной бот
+                new_session_id = dialogue_storage.create_session(
+                    ip_address=client_ip,
+                    kb_id=kb_id,
+                    kb_name=kb_name
+                )
+                print(f"Created new session {new_session_id} for IP {client_ip} with KB {kb_id}")
+                return new_session_id
+                
         except Exception as e:
-            print(f"Error in get_or_create_session for user {username}: {str(e)}")
+            print(f"Error in get_or_create_session for IP {client_ip}: {str(e)}")
             # Fallback to a simple session ID if there's an error
-            return f"fallback_{username}_{kb_id}"
+            return f"fallback_{client_ip}"
     
-    def generate_response(self, username: str, message: str) -> str:
-        """Generate a response using OpenAI GPT with RAG."""
+    def generate_response(self, username: str, message: str, client_ip: str) -> str:
+        """Generate a response using OpenAI GPT with RAG - exactly like main bot."""
         try:
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key or api_key == "your-openai-api-key-here":
                 return "⚠️ OpenAI API ключ не настроен. Пожалуйста, добавьте ваш API ключ в файл .env в папке Backend. Получить ключ можно на https://platform.openai.com/api-keys"
 
-            # Get or create persistent session
-            session_id = self.get_or_create_session(username)
-            print(f"Using session {session_id} for user {username}")
+            # Get or create session exactly like main bot
+            session_id = self.get_or_create_session(username, client_ip)
+            print(f"Using session {session_id} for IP {client_ip}")
             
             # Get settings
             settings = self.get_settings(username)
@@ -400,7 +385,7 @@ class StandaloneChatbotService:
             
             # Log masking information if any personal data was found
             if mask_info.get('total_masked', 0) > 0:
-                print(f"\n🔒 PERSONAL DATA MASKED for user {username}:")
+                print(f"\n🔒 PERSONAL DATA MASKED for IP {client_ip}:")
                 print(f"   Emails: {len(mask_info.get('emails', []))}")
                 print(f"   Phones: {len(mask_info.get('phones', []))}")
                 print(f"   Credit Cards: {len(mask_info.get('credit_cards', []))}")
@@ -435,7 +420,7 @@ class StandaloneChatbotService:
                 {"role": "system", "content": full_system_prompt}
             ]
             
-            # Get conversation history from dialogue storage (last 10 messages)
+            # Get conversation history from dialogue storage (last 10 messages) - exactly like main bot
             conversation_history = []
             try:
                 dialogue_storage = get_dialogue_storage()
@@ -447,9 +432,9 @@ class StandaloneChatbotService:
                         {"role": msg['role'], "content": msg['content']} 
                         for msg in last_messages
                     ]
-                    print(f"Loaded {len(conversation_history)} messages from history for user {username}")
+                    print(f"Loaded {len(conversation_history)} messages from history for IP {client_ip}")
                 else:
-                    print(f"No conversation history found for user {username} in session {session_id}")
+                    print(f"No conversation history found for IP {client_ip} in session {session_id}")
             except Exception as e:
                 print(f"Error getting conversation history: {str(e)}")
             
@@ -462,7 +447,7 @@ class StandaloneChatbotService:
             
             # Print the complete information sent to OpenAI
             print("================================================")
-            print(f"COMPLETE INFORMATION SENT TO OPENAI for user {username}:")
+            print(f"COMPLETE INFORMATION SENT TO OPENAI for IP {client_ip}:")
             for i, msg in enumerate(messages):
                 print(f"\n--- MESSAGE {i+1} ({msg['role'].upper()}) ---")
                 print(f"Content:\n{msg['content']}")
@@ -485,16 +470,16 @@ class StandaloneChatbotService:
                 input_tokens = response.usage.prompt_tokens
                 output_tokens = response.usage.completion_tokens
                 balance_manager.consume_tokens(input_tokens, output_tokens, current_model, "chatbot")
-                print(f"Token usage tracked for user {username}: {input_tokens} input, {output_tokens} output tokens")
+                print(f"Token usage tracked for IP {client_ip}: {input_tokens} input, {output_tokens} output tokens")
             except Exception as e:
                 print(f"Error tracking token usage: {e}")
             
-            # Save messages to dialogue storage (original unmasked message)
+            # Save messages to dialogue storage (original unmasked message) - exactly like main bot
             try:
                 dialogue_storage = get_dialogue_storage()
                 success_user = dialogue_storage.add_message(session_id, "user", message)
                 success_bot = dialogue_storage.add_message(session_id, "assistant", bot_response)
-                print(f"Messages saved to dialogue storage for user {username}: user={success_user}, bot={success_bot}")
+                print(f"Messages saved to dialogue storage for IP {client_ip}: user={success_user}, bot={success_bot}")
             except Exception as e:
                 print(f"Error saving messages to dialogue storage: {str(e)}")
             
@@ -509,30 +494,61 @@ class StandaloneChatbotService:
             elif "api" in error_msg.lower():
                 return f"❌ Ошибка OpenAI API: {error_msg}"
             else:
-                print(f"Error generating response for user {username}: {error_msg}")
+                print(f"Error generating response for IP {client_ip}: {error_msg}")
                 return "Извините, произошла ошибка при обработке вашего вопроса. Попробуйте еще раз."
     
-    def clear_user_session(self, username: str):
-        """Clear user session and start new one."""
+    def clear_user_session(self, username: str, client_ip: str):
+        """Clear user session and start new one - exactly like main bot."""
         try:
-            # Get the current session ID
-            session_id = self.get_or_create_session(username)
-            
-            # Delete the session from dialogue storage
+            # Используем точно такой же подход, как основной бот
             dialogue_storage = get_dialogue_storage()
-            dialogue_storage.delete_session(session_id)
             
-            print(f"Cleared session {session_id} for user {username}")
+            # Находим существующую сессию для этого IP
+            existing_session = dialogue_storage.get_session_by_ip(client_ip)
+            if existing_session:
+                session_id = existing_session['session_id']
+                
+                # Удаляем сессию из dialogue storage
+                dialogue_storage.delete_session(session_id)
+                print(f"Cleared session {session_id} for IP {client_ip}")
+                
+                # Создаем новую сессию
+                kb_id = self.get_current_kb_id(username)
+                try:
+                    user_data_dir = self.get_user_data_directory(username)
+                    kb_dir = user_data_dir / "knowledge_bases" / kb_id
+                    kb_info_file = kb_dir / "kb_info.json"
+                    kb_name = kb_id
+                    if kb_info_file.exists():
+                        with open(kb_info_file, 'r', encoding='utf-8') as f:
+                            kb_info = json.load(f)
+                            kb_name = kb_info.get('name', kb_id)
+                except Exception as e:
+                    print(f"Error getting KB name: {str(e)}")
+                    kb_name = kb_id
+                
+                new_session_id = dialogue_storage.create_session(
+                    ip_address=client_ip,
+                    kb_id=kb_id,
+                    kb_name=kb_name
+                )
+                print(f"Created new session {new_session_id} for IP {client_ip}")
+            else:
+                print(f"No existing session found for IP {client_ip}")
             
         except Exception as e:
-            print(f"Error clearing session for user {username}: {str(e)}")
+            print(f"Error clearing session for IP {client_ip}: {str(e)}")
     
-    def get_user_session_id(self, username: str) -> Optional[str]:
-        """Get current session ID for user."""
+    def get_user_session_id(self, username: str, client_ip: str) -> Optional[str]:
+        """Get current session ID for IP - exactly like main bot."""
         try:
-            return self.get_or_create_session(username)
+            dialogue_storage = get_dialogue_storage()
+            existing_session = dialogue_storage.get_session_by_ip(client_ip)
+            if existing_session:
+                return existing_session['session_id']
+            return None
         except Exception as e:
-            print(f"Error getting session ID for user {username}: {str(e)}")
+            print(f"Error getting session ID for IP {client_ip}: {str(e)}")
             return None
 
 # Global instance

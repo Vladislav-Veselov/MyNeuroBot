@@ -449,8 +449,12 @@ def standalone_clear_chat():
         # Import standalone chatbot service
         from standalone_chatbot_service import standalone_chatbot_service
         
-        # Clear user session
-        standalone_chatbot_service.clear_user_session(username)
+        # Get client IP address - exactly like main bot
+        from session_manager import ip_session_manager
+        client_ip = ip_session_manager.get_client_ip()
+        
+        # Clear user session with client IP
+        standalone_chatbot_service.clear_user_session(username, client_ip)
         
         return jsonify({"success": True, "message": "История чата очищена"})
     except Exception as e:
@@ -474,8 +478,12 @@ def standalone_chatbot():
         # Import standalone chatbot service
         from standalone_chatbot_service import standalone_chatbot_service
         
-        # Use standalone chatbot service
-        response = standalone_chatbot_service.generate_response(username, message)
+        # Get client IP address - exactly like main bot
+        from session_manager import ip_session_manager
+        client_ip = ip_session_manager.get_client_ip()
+        
+        # Use standalone chatbot service with client IP
+        response = standalone_chatbot_service.generate_response(username, message, client_ip)
         
         # Get updated balance
         balance = balance_manager.get_balance(username)
