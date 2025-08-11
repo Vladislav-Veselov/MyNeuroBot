@@ -432,6 +432,30 @@ def standalone_get_model():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/standalone/clear', methods=['POST'])
+def standalone_clear_chat():
+    """Clear chat history for standalone HTML chatbot."""
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Authorization header required"}), 401
+    
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    
+    if not username:
+        return jsonify({"error": "Username required"}), 400
+    
+    try:
+        # Import standalone chatbot service
+        from standalone_chatbot_service import standalone_chatbot_service
+        
+        # Clear user session
+        standalone_chatbot_service.clear_user_session(username)
+        
+        return jsonify({"success": True, "message": "История чата очищена"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/standalone/chatbot', methods=['POST'])
 def standalone_chatbot():
     """Chatbot API for standalone HTML chatbot."""
@@ -447,8 +471,11 @@ def standalone_chatbot():
         return jsonify({"error": "Message and username required"}), 400
     
     try:
-        # Use existing chatbot service
-        response = chatbot_service.generate_response(message, username)
+        # Import standalone chatbot service
+        from standalone_chatbot_service import standalone_chatbot_service
+        
+        # Use standalone chatbot service
+        response = standalone_chatbot_service.generate_response(username, message)
         
         # Get updated balance
         balance = balance_manager.get_balance(username)
