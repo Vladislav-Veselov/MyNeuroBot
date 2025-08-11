@@ -35,3 +35,6 @@ user_data/admin/system_prompt.txt
 # User-specific data (exclude all user directories except admin)
 user_data/*/
 !user_data/admin/ 
+
+# Widgets
+Widgets/

@@ -28,7 +28,13 @@ load_dotenv(override=True)
 app = Flask(__name__, 
             template_folder='../Frontend/templates',
             static_folder='../Frontend/static')
-CORS(app)
+
+# Configure CORS for standalone HTML chatbot
+CORS(app, 
+     origins=["*"],  # Allow all origins for standalone HTML
+     supports_credentials=True,  # Allow cookies and authentication
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Allow all methods
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"])  # Allow necessary headers
 
 # Configure session
 app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
@@ -360,6 +366,99 @@ def api_logout():
     """API endpoint for user logout."""
     session.clear()
     return jsonify({"success": True, "message": "Logged out successfully"})
+
+# ===== STANDALONE HTML CHATBOT API ENDPOINTS =====
+
+@app.route('/api/standalone/login', methods=['POST'])
+def standalone_login():
+    """API endpoint for standalone HTML chatbot login (token-based)."""
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    
+    result = auth.login_user(username, password)
+    
+    if result['success']:
+        # Return session token for standalone use
+        return jsonify({
+            "success": True,
+            "username": username,
+            "session_token": result['session_token'],
+            "data_directory": result['data_directory'],
+            "is_admin": result.get('is_admin', False)
+        })
+    
+    return jsonify(result)
+
+@app.route('/api/standalone/balance', methods=['GET'])
+def standalone_get_balance():
+    """Get user balance for standalone HTML chatbot."""
+    # Get token from header
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Authorization header required"}), 401
+    
+    token = auth_header.split(' ')[1]
+    
+    # Validate token and get user info
+    # For now, we'll use a simple approach - you can enhance this later
+    try:
+        # Get username from request args (temporary solution)
+        username = request.args.get('username')
+        if not username:
+            return jsonify({"error": "Username required"}), 400
+        
+        # Get balance using existing balance manager
+        balance = balance_manager.get_balance(username)
+        return jsonify({"balance": balance})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/standalone/model', methods=['GET'])
+def standalone_get_model():
+    """Get user model for standalone HTML chatbot."""
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Authorization header required"}), 401
+    
+    try:
+        username = request.args.get('username')
+        if not username:
+            return jsonify({"error": "Username required"}), 400
+        
+        # Get model from model manager
+        model_config = model_manager.get_model_config(username)
+        return jsonify({"model": model_config.get('model', 'GPT-4')})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/standalone/chatbot', methods=['POST'])
+def standalone_chatbot():
+    """Chatbot API for standalone HTML chatbot."""
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Authorization header required"}), 401
+    
+    data = request.get_json()
+    message = data.get('message', '').strip()
+    username = data.get('username', '').strip()
+    
+    if not message or not username:
+        return jsonify({"error": "Message and username required"}), 400
+    
+    try:
+        # Use existing chatbot service
+        response = chatbot_service.generate_response(message, username)
+        
+        # Get updated balance
+        balance = balance_manager.get_balance(username)
+        
+        return jsonify({
+            "response": response,
+            "balance": balance
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/documents')
 @login_required
