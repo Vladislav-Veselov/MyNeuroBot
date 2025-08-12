@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : '';
 
         return `
-            <div class="document-card bg-[#242A36] border border-[#2D3446] rounded-lg p-4 hover:shadow-md transition-shadow" data-id="${doc.id}">
+            <div class="document-card bg-[#242A36] border border-[#2D3446] rounded-lg p-4 hover:shadow-md transition-shadow" data-id="${doc.id}" data-question="${encodeURIComponent(question)}" data-answer="${encodeURIComponent(answer)}">
                 <div class="space-y-2">
                     <div class="flex justify-between items-start">
                         <div class="question text-lg font-semibold text-[#DC4918] flex-1">
@@ -321,8 +321,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (e.target.classList.contains('edit-btn')) {
             e.stopPropagation(); // Prevent modal from opening
-            const question = card.querySelector('.question').textContent.trim();
-            const answer = card.querySelector('.answer').textContent.trim();
+            const question = decodeURIComponent(card.dataset.question);
+            const answer = decodeURIComponent(card.dataset.answer);
             openEditModal(docId, question, answer);
         } else if (e.target.classList.contains('delete-btn')) {
             e.stopPropagation(); // Prevent modal from opening
