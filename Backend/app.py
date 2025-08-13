@@ -1605,6 +1605,16 @@ def change_kb_password(kb_id):
         if not kb_dir.exists() or not kb_info_file.exists():
             return jsonify({'error': 'База знаний не найдена'}), 404
         
+        # Check if new password is already used by any other KB
+        for kb_folder in kb_dir.parent.iterdir():
+            if kb_folder.is_dir() and kb_folder.name != kb_id:  # Skip current KB
+                other_password_file = kb_folder / "password.txt"
+                if other_password_file.exists():
+                    with open(other_password_file, 'r', encoding='utf-8') as f:
+                        other_password = f.read().strip()
+                    if other_password == new_password:
+                        return jsonify({'error': 'Пароль уже используется в другой базе знаний'}), 400
+        
         # Read current KB info
         with open(kb_info_file, 'r', encoding='utf-8') as f:
             kb_info = json.load(f)
@@ -1986,6 +1996,7 @@ def check_kb_password():
     try:
         data = request.get_json()
         password = (data.get('password') or '').strip()
+        exclude_kb_id = data.get('exclude_kb_id', None)  # Optional: exclude this KB from check
         
         if not password:
             return jsonify({'error': 'Пожалуйста, введите пароль.'}), 400
@@ -1999,6 +2010,10 @@ def check_kb_password():
         
         for kb_folder in kb_dir.iterdir():
             if kb_folder.is_dir():
+                # Skip the excluded KB (useful when changing passwords)
+                if exclude_kb_id and kb_folder.name == exclude_kb_id:
+                    continue
+                    
                 password_file = kb_folder / "password.txt"
                 if password_file.exists():
                     with open(password_file, 'r', encoding='utf-8') as f:
@@ -2009,6 +2024,45 @@ def check_kb_password():
         return jsonify({'is_unique': True})
     except Exception as e:
         print(f"Error in check_kb_password: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/knowledge-bases/<kb_id>/download', methods=['GET'])
+@login_required
+def download_knowledge_file(kb_id):
+    """API endpoint to download the knowledge.txt file for a specific knowledge base."""
+    try:
+        user_data_dir = get_current_user_data_dir()
+        kb_dir = user_data_dir / "knowledge_bases" / kb_id
+        
+        if not kb_dir.exists():
+            return jsonify({'error': 'База знаний не найдена'}), 404
+        
+        knowledge_file = kb_dir / "knowledge.txt"
+        if not knowledge_file.exists():
+            return jsonify({'error': 'Файл знаний не найден'}), 404
+        
+        # Get KB name for the filename
+        kb_info_file = kb_dir / "kb_info.json"
+        kb_name = kb_id
+        if kb_info_file.exists():
+            with open(kb_info_file, 'r', encoding='utf-8') as f:
+                kb_info = json.load(f)
+                kb_name = kb_info.get('name', kb_id)
+        
+        # Create a safe filename
+        safe_filename = "".join(c for c in kb_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        safe_filename = safe_filename.replace(' ', '_')
+        
+        # Return the file for download
+        return send_from_directory(
+            kb_dir, 
+            'knowledge.txt',
+            as_attachment=True,
+            download_name=f"{safe_filename}_knowledge.txt"
+        )
+        
+    except Exception as e:
+        print(f"Error downloading knowledge file for KB {kb_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
