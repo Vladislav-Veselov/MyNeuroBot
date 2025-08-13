@@ -42,6 +42,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const helpModal = document.getElementById('help-modal');
     const closeHelpModalBtn = document.getElementById('close-help-modal');
     
+    // Download button element
+    const downloadKbBtn = document.getElementById('download-kb-btn');
+    
     // State
     let currentPage = 1;
     let totalPages = 1;
@@ -498,6 +501,9 @@ document.addEventListener('DOMContentLoaded', () => {
     helpBtn.addEventListener('click', openHelpModal);
     closeHelpModalBtn.addEventListener('click', closeHelpModal);
 
+    // Download button event listener
+    downloadKbBtn.addEventListener('click', handleDownloadKnowledgeFile);
+
     // Close help modal when clicking outside
     helpModal.addEventListener('click', (e) => {
         if (e.target === helpModal) {
@@ -511,6 +517,103 @@ document.addEventListener('DOMContentLoaded', () => {
             closeHelpModal();
         }
     });
+
+    // Download knowledge file function
+    async function handleDownloadKnowledgeFile() {
+        try {
+            // Show loading state
+            const originalText = downloadKbBtn.title;
+            const originalHTML = downloadKbBtn.innerHTML;
+            
+            downloadKbBtn.disabled = true;
+            downloadKbBtn.title = 'Скачивание...';
+            downloadKbBtn.innerHTML = `
+                <svg class="h-5 w-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+            `;
+            
+            // Get current KB ID from the KB manager
+            if (window.kbManager && window.kbManager.currentKbId) {
+                const kbId = window.kbManager.currentKbId;
+                
+                // Create download link
+                const downloadUrl = `/api/knowledge-bases/${kbId}/download`;
+                
+                // Create temporary link element and trigger download
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = '';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Show success feedback
+                downloadKbBtn.innerHTML = `
+                    <svg class="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                `;
+                downloadKbBtn.title = 'Файл скачан!';
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    downloadKbBtn.disabled = false;
+                    downloadKbBtn.title = originalText;
+                    downloadKbBtn.innerHTML = originalHTML;
+                }, 2000);
+                
+            } else {
+                // Fallback: try to get current KB from the selector
+                const kbSelector = document.getElementById('kb-selector');
+                if (kbSelector && kbSelector.value) {
+                    const kbId = kbSelector.value;
+                    
+                    // Create download link
+                    const downloadUrl = `/api/knowledge-bases/${kbId}/download`;
+                    
+                    // Create temporary link element and trigger download
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = '';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Show success feedback
+                    downloadKbBtn.innerHTML = `
+                        <svg class="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    `;
+                    downloadKbBtn.title = 'Файл скачан!';
+                    
+                    // Reset after 2 seconds
+                    setTimeout(() => {
+                        downloadKbBtn.disabled = false;
+                        downloadKbBtn.title = originalText;
+                        downloadKbBtn.innerHTML = originalHTML;
+                    }, 2000);
+                    
+                } else {
+                    alert('Не удалось определить текущую базу знаний. Пожалуйста, выберите базу знаний и попробуйте снова.');
+                    
+                    // Reset button state
+                    downloadKbBtn.disabled = false;
+                    downloadKbBtn.title = originalText;
+                    downloadKbBtn.innerHTML = originalHTML;
+                }
+            }
+        } catch (error) {
+            console.error('Error downloading knowledge file:', error);
+            alert('Ошибка при скачивании файла: ' + error.message);
+            
+            // Reset button state on error
+            downloadKbBtn.disabled = false;
+            downloadKbBtn.title = originalText;
+            downloadKbBtn.innerHTML = originalHTML;
+        }
+    }
 
     // Initialize
     async function initialize() {

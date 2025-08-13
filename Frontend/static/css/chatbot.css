@@ -159,4 +159,40 @@
 .bot-avatar {
     background: #DC4918;
     color: white;
+}
+
+/* Knowledge Base Display Styling */
+#current-kb-display {
+    transition: all 0.2s ease-in-out;
+}
+
+#current-kb-display:hover {
+    background: #242A36;
+}
+
+#current-kb-name {
+    transition: opacity 0.2s ease-in-out;
+    padding: 2px 8px;
+    background: rgba(220, 73, 24, 0.1);
+    border-radius: 4px;
+    border: 1px solid rgba(220, 73, 24, 0.2);
+}
+
+#current-kb-name.opacity-50 {
+    opacity: 0.5;
+}
+
+#current-kb-id {
+    transition: opacity 0.2s ease-in-out;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+}
+
+/* Knowledge base icon animation */
+#current-kb-display svg {
+    transition: transform 0.2s ease-in-out;
+}
+
+#current-kb-display:hover svg {
+    transform: scale(1.1);
 } 

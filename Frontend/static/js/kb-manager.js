@@ -116,6 +116,8 @@ class KnowledgeBaseManager {
         const closeCreateKbModal = document.getElementById('close-create-kb-modal');
         const cancelCreateKb = document.getElementById('cancel-create-kb');
         const createKbForm = document.getElementById('create-kb-form');
+        const kbNameInput = document.getElementById('kb-name');
+        const kbPasswordInput = document.getElementById('kb-password');
 
         closeCreateKbModal.addEventListener('click', () => {
             this.hideCreateKbModal();
@@ -130,7 +132,22 @@ class KnowledgeBaseManager {
             this.createKnowledgeBase();
         });
 
-        // Close modal when clicking outside
+        // Clear errors when user starts typing
+        kbNameInput.addEventListener('input', () => {
+            const error = document.getElementById('create-kb-error');
+            if (error) {
+                error.textContent = '';
+            }
+        });
+
+        kbPasswordInput.addEventListener('input', () => {
+            const error = document.getElementById('create-kb-error');
+            if (error) {
+                error.textContent = '';
+            }
+        });
+
+        // Close create KB modal when clicking outside
         createKbModal.addEventListener('click', (e) => {
             if (e.target === createKbModal) {
                 this.hideCreateKbModal();
@@ -167,6 +184,7 @@ class KnowledgeBaseManager {
         const closeChangePasswordModal = document.getElementById('close-change-password-modal');
         const cancelChangePassword = document.getElementById('cancel-change-password');
         const changePasswordForm = document.getElementById('change-kb-password-form');
+        const newPasswordInput = document.getElementById('new-kb-password');
 
         closeChangePasswordModal.addEventListener('click', () => {
             this.hideChangePasswordModal();
@@ -179,6 +197,14 @@ class KnowledgeBaseManager {
         changePasswordForm.addEventListener('submit', (e) => {
             e.preventDefault();
             this.changeKbPassword();
+        });
+
+        // Clear error when user starts typing in password field
+        newPasswordInput.addEventListener('input', () => {
+            const error = document.getElementById('change-password-error');
+            if (error) {
+                error.textContent = '';
+            }
         });
 
         // Close change password modal when clicking outside
@@ -355,6 +381,20 @@ class KnowledgeBaseManager {
             return;
         }
 
+        // Validate password format
+        const passwordValidation = this.validatePassword(password);
+        if (!passwordValidation.isValid) {
+            error.textContent = passwordValidation.error;
+            return;
+        }
+
+        // Check password uniqueness (excluding current KB)
+        const uniquenessCheck = await this.checkPasswordUniquenessForChange(password);
+        if (!uniquenessCheck.isUnique) {
+            error.textContent = uniquenessCheck.error;
+            return;
+        }
+
         try {
             const response = await fetch(`/api/knowledge-bases/${this.currentKbId}/password`, {
                 method: 'PUT',
@@ -507,6 +547,36 @@ class KnowledgeBaseManager {
             }
         } catch (error) {
             console.error('Error checking password uniqueness:', error);
+            return { isUnique: true }; // Allow if we can't check
+        }
+    }
+
+    async checkPasswordUniquenessForChange(password) {
+        try {
+            // Use the existing endpoint but we'll handle the current KB exclusion in the backend
+            const response = await fetch('/api/knowledge-bases/check-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    password,
+                    exclude_kb_id: this.currentKbId  // Exclude current KB from uniqueness check
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.is_unique) {
+                return { isUnique: true };
+            } else {
+                return {
+                    isUnique: false,
+                    error: data.error || 'Пароль уже используется в другой базе знаний'
+                };
+            }
+        } catch (error) {
+            console.error('Error checking password uniqueness for change:', error);
             return { isUnique: true }; // Allow if we can't check
         }
     }

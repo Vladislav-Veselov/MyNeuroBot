@@ -116,6 +116,11 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
                             </button>
+                            <button id="download-kb-btn" class="btn-secondary" title="Скачать файл знаний (knowledge.txt) для текущей базы знаний">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </button>
                             <button id="create-kb-btn" class="btn-secondary" title="Создать новую базу знаний">
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -415,7 +420,7 @@
                 <form id="change-kb-password-form" class="space-y-4" style="background-color: #242A36 !important;">
                     <div>
                         <label for="new-kb-password" class="block text-sm font-medium text-[#A0AEC0] mb-1">Новый пароль</label>
-                        <input type="password" id="new-kb-password" name="password" 
+                        <input type="text" id="new-kb-password" name="password" 
                                class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
                                placeholder="Введите новый пароль...">
                     </div>
@@ -470,7 +475,7 @@
 
     <!-- Help modal -->
     <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto" style="background-color: #242A36 !important;">
+        <div class="bg-[#242A36] rounded-lg shadow-xl overflow-y-auto" style="background-color: #242A36 !important;">
             <div class="p-6" style="background-color: #242A36 !important;">
                 <div class="flex justify-between items-start mb-4">
                     <h3 class="text-xl font-semibold text-white">Справка по работе с базой знаний</h3>

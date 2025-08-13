@@ -4,6 +4,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendButton = document.getElementById('send-button');
     const chatMessages = document.getElementById('chat-messages');
     const clearChatButton = document.getElementById('clear-chat');
+    const currentKbName = document.getElementById('current-kb-name');
+    const currentKbId = document.getElementById('current-kb-id');
+
+    // Load current knowledge base name on page load
+    loadCurrentKnowledgeBase();
 
     // Handle form submission
     chatForm.addEventListener('submit', function(e) {
@@ -28,6 +33,71 @@ document.addEventListener('DOMContentLoaded', function() {
     clearChatButton.addEventListener('click', function() {
         clearChat();
     });
+
+    // Function to load current knowledge base name
+    async function loadCurrentKnowledgeBase() {
+        try {
+            currentKbName.textContent = 'Загрузка...';
+            currentKbName.classList.add('opacity-50');
+            
+            const response = await fetch('/api/knowledge-bases');
+            const data = await response.json();
+            
+            if (data.success && data.knowledge_bases && data.current_kb_id) {
+                const currentKb = data.knowledge_bases.find(kb => kb.id === data.current_kb_id);
+                if (currentKb) {
+                    currentKbName.textContent = currentKb.name;
+                    currentKbId.textContent = `(ID: ${currentKb.id})`;
+                } else {
+                    currentKbName.textContent = 'База знаний по умолчанию';
+                    currentKbId.textContent = '(ID: default)';
+                }
+            } else {
+                currentKbName.textContent = 'База знаний по умолчанию';
+                currentKbId.textContent = '(ID: default)';
+            }
+            
+            currentKbName.classList.remove('opacity-50');
+        } catch (error) {
+            console.error('Error loading knowledge base info:', error);
+            currentKbName.textContent = 'База знаний по умолчанию';
+            currentKbId.textContent = '(ID: default)';
+            currentKbName.classList.remove('opacity-50');
+        }
+    }
+
+    // Function to refresh knowledge base name (useful after KB switching)
+    function refreshKnowledgeBaseName() {
+        loadCurrentKnowledgeBase();
+    }
+
+    // Function to handle KB switching responses
+    function handleKBSwitchResponse(response) {
+        if (response && typeof response === 'string') {
+            // Check if this is a KB switch response
+            if (response.includes('Переключение на базу знаний') || 
+                response.includes('✅') || 
+                response.includes('база знаний')) {
+                
+                // Show a temporary success indicator
+                const originalText = currentKbName.textContent;
+                currentKbName.textContent = 'Обновление...';
+                currentKbName.style.color = '#10B981'; // Green color for success
+                
+                // Refresh the KB name after a short delay
+                setTimeout(() => {
+                    refreshKnowledgeBaseName();
+                    // Reset color after refresh
+                    setTimeout(() => {
+                        currentKbName.style.color = '';
+                    }, 1000);
+                }, 800);
+            }
+        }
+    }
+
+    // Set up periodic refresh of KB name (every 30 seconds)
+    setInterval(refreshKnowledgeBaseName, 30000);
 
     function sendMessage() {
         const message = chatInput.value.trim();
@@ -76,6 +146,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     // Add bot response
                     addMessage(data.response, 'bot');
+                    
+                    // Handle KB switching responses
+                    handleKBSwitchResponse(data.response);
                 } else {
                     // Add error message
                     addMessage('Извините, произошла ошибка: ' + (data.error || 'Неизвестная ошибка'), 'bot');
@@ -196,6 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 console.log('Chat history cleared');
+                refreshKnowledgeBaseName(); // Refresh KB name after clearing chat
             } else {
                 console.error('Error clearing chat history:', data.error);
             }
