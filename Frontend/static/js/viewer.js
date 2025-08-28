@@ -471,11 +471,45 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             closeEditModal();
-            // Refresh the current page to show updated data
-            const currentData = await fetchDocuments(currentPage, currentSearch);
-            updateDocuments(currentData);
+            
+            // Refresh the document list and handle pagination properly
+            try {
+                // First, get the total count to see if current page is still valid
+                const totalData = await fetchDocuments(1, currentSearch);
+                const totalPages = totalData.pagination.total_pages;
+                
+                // If current page is now invalid, go to the last valid page
+                if (currentPage > totalPages && totalPages > 0) {
+                    currentPage = totalPages;
+                }
+                
+                // Refresh with the adjusted page
+                const currentData = await fetchDocuments(currentPage, currentSearch);
+                updateDocuments(currentData);
+                
+                // Update pagination controls
+                updatePagination(currentData.pagination);
+            } catch (error) {
+                console.error('Error refreshing after edit:', error);
+                // Fallback: go to page 1
+                currentPage = 1;
+                const fallbackData = await fetchDocuments(1, currentSearch);
+                updateDocuments(fallbackData);
+                updatePagination(fallbackData.pagination);
+            }
         } catch (error) {
-            editQaError.textContent = 'Ошибка сети. Попробуйте еще раз.';
+            console.error('Error editing document:', error);
+            
+            // Provide more helpful error messages
+            if (error.message.includes('Document not found') || error.message.includes('Документ не найден')) {
+                editQaError.textContent = 'Документ был удален или перемещен. Страница будет обновлена автоматически.';
+                // Auto-refresh to get current document list
+                setTimeout(() => {
+                    handleSearch();
+                }, 1000);
+            } else {
+                editQaError.textContent = 'Ошибка сети. Попробуйте еще раз.';
+            }
         }
     }
 
@@ -493,12 +527,48 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             closeDeleteModal();
-            // Refresh the current page to show updated data
-            const currentData = await fetchDocuments(currentPage, currentSearch);
-            updateDocuments(currentData);
+            
+            // Refresh the document list and handle pagination properly
+            try {
+                // First, get the total count to see if current page is still valid
+                const totalData = await fetchDocuments(1, currentSearch);
+                const totalPages = totalData.pagination.total_pages;
+                
+                // If current page is now invalid, go to the last valid page
+                if (currentPage > totalPages && totalPages > 0) {
+                    currentPage = totalPages;
+                }
+                
+                // Refresh with the adjusted page
+                const currentData = await fetchDocuments(currentPage, currentSearch);
+                updateDocuments(currentData);
+                
+                // Update pagination controls
+                updatePagination(currentData.pagination);
+            } catch (error) {
+                console.error('Error refreshing after deletion:', error);
+                // Fallback: go to page 1
+                currentPage = 1;
+                const fallbackData = await fetchDocuments(1, currentSearch);
+                updateDocuments(fallbackData);
+                updatePagination(fallbackData.pagination);
+            }
         } catch (error) {
             console.error('Error deleting document:', error);
-            alert('Ошибка при удалении: ' + error.message);
+            
+            // Provide more helpful error messages
+            let errorMessage = 'Ошибка при удалении: ';
+            if (error.message.includes('Document not found') || error.message.includes('Документ не найден')) {
+                errorMessage += 'Документ был удален или перемещен. Страница будет обновлена автоматически.';
+                // Auto-refresh to get current document list
+                setTimeout(() => {
+                    handleSearch();
+                }, 1000);
+            } else {
+                errorMessage += error.message;
+            }
+            
+            alert(errorMessage);
         }
     }
 

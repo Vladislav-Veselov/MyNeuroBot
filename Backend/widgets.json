@@ -23,5 +23,10 @@
     "tenant_id": "alexey",
     "user_data_dir": "../user_data/alexey",
     "allowed_origins": ["https://creatium.com", "https://www.creatium.com", "https://myneurobot.onrender.com"]
+  },
+  "creatium-veselovAS-widget": {
+    "tenant_id": "veselovAS",
+    "user_data_dir": "../user_data/veselovAS",
+    "allowed_origins"S: ["https://creatium.com", "https://www.creatium.com", "https://myneurobot.onrender.com"]
   }
 }
