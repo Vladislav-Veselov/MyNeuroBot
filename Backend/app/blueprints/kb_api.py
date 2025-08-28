@@ -5,7 +5,7 @@ import json
 import re
 import uuid
 from datetime import datetime
-from vectorize import rebuild_vector_store
+from vectorize import rebuild_vector_store, split_qa_pairs, extract_question
 
 kb_api_bp = Blueprint('kb_api', __name__)
 
@@ -70,42 +70,42 @@ def get_knowledge_file_path(kb_id: str = None) -> Path:
     return kb_dir / "knowledge.txt"
 
 def parse_knowledge_file(kb_id: str = None) -> list:
-    """Parse the knowledge.txt file into a list of Q&A pairs."""
+    """Parse the knowledge.txt into robust Q&A pairs using 'Вопрос:' headers."""
     try:
         knowledge_file = get_knowledge_file_path(kb_id)
-        
         if not knowledge_file.exists():
             return []
-        
-        with open(knowledge_file, 'r', encoding='utf-8') as f:
-            content = f.read()
+
+        content = knowledge_file.read_text(encoding='utf-8')
     except Exception as e:
         print(f"Error parsing knowledge file: {str(e)}")
         return []
-    
-    # Split content into Q&A pairs
+
     qa_pairs = []
-    blocks = content.split('\n\n')
-    
-    for i, block in enumerate(blocks):
-        if not block.strip():
+    blocks = split_qa_pairs(content)  # SAME logic as vectorize.py
+
+    for blk in blocks:
+        if "Вопрос:" not in blk:
             continue
-            
-        lines = [line.strip() for line in block.split('\n') if line.strip()]
-        if not lines or not lines[0].startswith('Вопрос:'):
-            continue
-            
-        question = lines[0][len('Вопрос:'):].strip()
-        answer_lines = [line.strip() for line in lines[1:] if line.strip()]
-        answer = '\n'.join(answer_lines)
-        
+
+        # question: first line after "Вопрос:"
+        question = extract_question(blk)
+
+        # answer: everything after the "Вопрос:" line (preserve paragraphs)
+        lines = blk.splitlines()
+        # find the header line index to be safe if there are leading blanks
+        start_idx = next((i for i, line in enumerate(lines) if line.startswith("Вопрос:")), None)
+        answer = ""
+        if start_idx is not None and start_idx + 1 < len(lines):
+            answer = "\n".join(lines[start_idx + 1:]).strip()
+
         qa_pairs.append({
-            'id': i,
-            'question': question,
-            'answer': answer,
-            'content': f"Вопрос: {question}\n{answer}"
+            "id": len(qa_pairs),  # continuous 0..N-1
+            "question": question,
+            "answer": answer,
+            "content": f"Вопрос: {question}\n{answer}"
         })
-    
+
     return qa_pairs
 
 def get_all_documents() -> list:
@@ -608,12 +608,10 @@ def save_knowledge_file(documents: list) -> None:
         knowledge_file = get_knowledge_file_path()
         
         content = '\n\n'.join(
-            f"Вопрос: {doc['question']}\n{doc['answer']}"
-            for doc in documents
-        )
+            f"Вопрос: {doc['question']}\n{doc['answer']}" for doc in documents
+        ).rstrip() + '\n\n'
         
-        with open(knowledge_file, 'w', encoding='utf-8') as f:
-            f.write(content + '\n\n')  # Add final newlines for consistency
+        knowledge_file.write_text(content, encoding='utf-8')
     except Exception as e:
         print(f"Error saving knowledge file: {str(e)}")
 

@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
-from vectorize import rebuild_vector_store
+from vectorize import rebuild_vector_store, split_qa_pairs, extract_question
 import faiss
 import numpy as np
 from langchain_openai import OpenAIEmbeddings
@@ -96,57 +96,41 @@ class ChatbotService:
             return None, None
     
     def parse_knowledge_file(self) -> List[Dict[str, Any]]:
-        """Parse the knowledge.txt file into a list of Q&A pairs."""
+        """Parse knowledge.txt of the current KB into Q&A pairs (same as vectorize.py)."""
         try:
             from auth import get_current_user_data_dir
             user_data_dir = get_current_user_data_dir()
             current_kb_id, _ = self.get_current_kb_info()
-            
-            # Use current KB's knowledge file
+
             kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
             knowledge_file = kb_dir / "knowledge.txt"
-            
             if not knowledge_file.exists():
                 return []
-            
-            with open(knowledge_file, 'r', encoding='utf-8') as f:
-                content = f.read()
+
+            content = knowledge_file.read_text(encoding='utf-8')
         except Exception as e:
             print(f"Error parsing knowledge file: {str(e)}")
             return []
-        
+
         qa_pairs = []
-        blocks = content.split('\n\n')
-        
-        for i, block in enumerate(blocks):
-            if not block.strip():
+        for blk in split_qa_pairs(content):
+            if "Вопрос:" not in blk:
                 continue
-                
-            lines = [line.strip() for line in block.split('\n') if line.strip()]
-            if not lines:
-                continue
-                
-            if not lines[0].startswith('Вопрос:'):
-                continue
-                
-            question = lines[0][len('Вопрос:'):].strip()
-            answer_lines = []
-            for line in lines[1:]:
-                line = line.strip()
-                if line:
-                    answer_lines.append(line)
-            
-            answer = '\n'.join(answer_lines)
-            answer = re.sub(r'^(\s|\n)+', '', answer)
-            answer = re.sub(r'(\s|\n)+$', '', answer)
-            
+
+            question = extract_question(blk)
+            lines = blk.splitlines()
+            start_idx = next((i for i, line in enumerate(lines) if line.startswith("Вопрос:")), None)
+            answer = ""
+            if start_idx is not None and start_idx + 1 < len(lines):
+                answer = "\n".join(lines[start_idx + 1:]).strip()
+
             qa_pairs.append({
-                'id': i,
-                'question': question,
-                'answer': answer,
-                'content': f"Вопрос: {question}\n{answer}"
+                "id": len(qa_pairs),
+                "question": question,
+                "answer": answer,
+                "content": f"Вопрос: {question}\n{answer}"
             })
-        
+
         return qa_pairs
     
     def search_knowledge_base(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
