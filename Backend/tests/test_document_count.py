@@ -17,7 +17,7 @@ def test_document_count():
     # Test updating document count for current KB
     print("\n1. Testing update_kb_document_count...")
     try:
-        from app import get_current_kb_id
+        from app.blueprints.kb_api import get_current_kb_id
         current_kb_id = get_current_kb_id()
         print(f"Current KB ID: {current_kb_id}")
         

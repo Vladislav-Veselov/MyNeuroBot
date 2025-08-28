@@ -44,7 +44,7 @@ class KnowledgeBaseManager {
             selector.innerHTML = '';
             const option = document.createElement('option');
             option.value = 'default';
-            option.textContent = 'База знаний для клиентов';
+                            option.textContent = 'База знаний по умолчанию';
             option.style.backgroundColor = '#242A36';
             option.style.color = 'white';
             option.selected = true;

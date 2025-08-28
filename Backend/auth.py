@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import request, jsonify, session, redirect, url_for
 
+
 # Configuration
 BASE_DIR = Path(__file__).resolve().parent.parent
 USERS_FILE = BASE_DIR / "user_data" / "users.json"
@@ -99,7 +100,7 @@ class UserAuth:
         
         # Create KB info
         kb_info = {
-            'name': 'База знаний для клиентов',
+            'name': 'База знаний по умолчанию',
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat(),
             'document_count': 0,
@@ -278,6 +279,14 @@ def admin_required_web(f):
 
 def get_current_user_data_dir() -> Path:
     """Get the current user's data directory."""
+    from tenant_context import get_user_data_dir_override
+    
+    # Check for tenant context override first
+    override = get_user_data_dir_override()
+    if override:
+        return Path(override)
+    
+    # Fallback: existing logged-in user logic
     username = session.get('username')
     if not username:
         raise ValueError("No user logged in")

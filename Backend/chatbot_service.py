@@ -39,9 +39,8 @@ class ChatbotService:
         """Get chatbot settings from file for current KB."""
         try:
             from auth import get_current_user_data_dir
-            from app import get_current_kb_id
             user_data_dir = get_current_user_data_dir()
-            current_kb_id = get_current_kb_id()
+            current_kb_id, _ = self.get_current_kb_info()
             
             # Use current KB's settings file
             kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
@@ -77,9 +76,8 @@ class ChatbotService:
         """Initialize and return the vector store components."""
         try:
             from auth import get_current_user_data_dir
-            from app import get_current_kb_id
             user_data_dir = get_current_user_data_dir()
-            current_kb_id = get_current_kb_id()
+            current_kb_id, _ = self.get_current_kb_info()
             
             # Use current KB's vector store
             kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
@@ -101,9 +99,8 @@ class ChatbotService:
         """Parse the knowledge.txt file into a list of Q&A pairs."""
         try:
             from auth import get_current_user_data_dir
-            from app import get_current_kb_id
             user_data_dir = get_current_user_data_dir()
-            current_kb_id = get_current_kb_id()
+            current_kb_id, _ = self.get_current_kb_info()
             
             # Use current KB's knowledge file
             kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
@@ -194,18 +191,7 @@ class ChatbotService:
         
         # Get current KB info
         try:
-            from auth import get_current_user_data_dir
-            from app import get_current_kb_id
-            user_data_dir = get_current_user_data_dir()
-            current_kb_id = get_current_kb_id()
-            
-            kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
-            kb_info_file = kb_dir / "kb_info.json"
-            kb_name = current_kb_id
-            if kb_info_file.exists():
-                with open(kb_info_file, 'r', encoding='utf-8') as f:
-                    kb_info = json.load(f)
-                    kb_name = kb_info.get('name', current_kb_id)
+            _, kb_name = self.get_current_kb_info()
         except Exception as e:
             print(f"Error getting current KB info: {str(e)}")
             kb_name = "default"
@@ -349,13 +335,13 @@ class ChatbotService:
                 {"role": "system", "content": full_system_prompt}
             ]
             
-            # Get conversation history from dialogue storage (last 10 messages)
+            # Get conversation history from dialogue storage (last 20 messages)
             conversation_history = []
             if self.get_current_session_id():
                 session_data = dialogue_storage.get_session(self.get_current_session_id())
                 if session_data and session_data.get('messages'):
-                    # Get last 10 messages from the session
-                    last_messages = session_data['messages'][-10:]
+                    # Get last 20 messages from the session
+                    last_messages = session_data['messages'][-20:]
                     conversation_history = [
                         {"role": msg['role'], "content": msg['content']} 
                         for msg in last_messages
@@ -462,13 +448,39 @@ class ChatbotService:
         ip_session_manager.clear_current_ip_session()
     
     def get_current_kb_info(self) -> tuple[str, str]:
-        """Get current KB ID and name."""
+        """Resolve current KB from the ACTIVE SESSION first; fallback to current_kb.json (dashboard only)."""
         try:
+            dialogue_storage = get_dialogue_storage()
+            current_session_id = self.get_current_session_id()
+            if current_session_id:
+                session = dialogue_storage.get_session(current_session_id)
+                if session:
+                    kb_id = session.get("kb_id") or session.get("metadata", {}).get("kb_id")
+                    kb_name = session.get("kb_name") or session.get("metadata", {}).get("kb_name")
+                    if kb_id:
+                        if not kb_name:
+                            from auth import get_current_user_data_dir
+                            user_data_dir = get_current_user_data_dir()
+                            kb_dir = user_data_dir / "knowledge_bases" / kb_id
+                            kb_info_file = kb_dir / "kb_info.json"
+                            kb_name = kb_id
+                            if kb_info_file.exists():
+                                with open(kb_info_file, 'r', encoding='utf-8') as f:
+                                    info = json.load(f)
+                                    kb_name = info.get('name', kb_id)
+                        return kb_id, kb_name or kb_id
+
+            # Fallback for authenticated dashboard / legacy
             from auth import get_current_user_data_dir
-            from app import get_current_kb_id
             user_data_dir = get_current_user_data_dir()
-            current_kb_id = get_current_kb_id()
-            
+            current_kb_file = user_data_dir / "current_kb.json"
+            if current_kb_file.exists():
+                with open(current_kb_file, 'r', encoding='utf-8') as f:
+                    current_kb_data = json.load(f)
+                    current_kb_id = current_kb_data.get('current_kb_id', 'default')
+            else:
+                current_kb_id = "default"
+
             kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
             kb_info_file = kb_dir / "kb_info.json"
             kb_name = current_kb_id
@@ -476,7 +488,7 @@ class ChatbotService:
                 with open(kb_info_file, 'r', encoding='utf-8') as f:
                     kb_info = json.load(f)
                     kb_name = kb_info.get('name', current_kb_id)
-            
+
             return current_kb_id, kb_name
         except Exception as e:
             print(f"Error getting current KB info: {str(e)}")

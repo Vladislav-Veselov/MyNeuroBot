@@ -268,6 +268,31 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
+    function showDocumentModalFromCard(card) {
+        const question = decodeURIComponent(card.dataset.question || '');
+        const answer = decodeURIComponent(card.dataset.answer || '');
+
+        modalContent.innerHTML = `
+            <div class="space-y-6">
+                <div class="question-section">
+                    <h4 class="text-lg font-semibold text-[#DC4918] mb-2">Вопрос</h4>
+                    <div class="bg-[#2D3446] p-4 rounded-lg">
+                        ${highlightText(question, currentSearch || currentSemanticSearch)}
+                    </div>
+                </div>
+                <div class="answer-section">
+                    <h4 class="text-lg font-semibold text-[#DC4918] mb-2">Ответ</h4>
+                    <div class="bg-[#2D3446] p-4 rounded-lg whitespace-pre-line">
+                        ${highlightText(answer, currentSearch || currentSemanticSearch)}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
     // Event handlers
     async function handleSearch() {
         currentSearch = searchInput.value.trim();
@@ -331,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation(); // Prevent modal from opening
             openDeleteModal(docId);
         } else {
-            showDocumentModal(docId);
+            showDocumentModalFromCard(card);
         }
     });
 

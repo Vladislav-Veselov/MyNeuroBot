@@ -15,7 +15,7 @@ def test_kb_selector_fix():
         'knowledge_bases': [
             {
                 'id': 'kb1',
-                'name': 'База знаний для клиентов',
+                'name': 'База знаний по умолчанию',
                 'created_at': '2024-01-01T00:00:00',
                 'updated_at': '2024-01-01T00:00:00',
                 'document_count': 5,

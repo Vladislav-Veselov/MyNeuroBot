@@ -1,0 +1,27 @@
+{
+  "demo-widget": {
+    "tenant_id": "demo-tenant",
+    "user_data_dir": "../user_data/demo-tenant",
+    "allowed_origins": ["http://localhost:3000", "https://example.com"]
+  },
+  "acme-widget": {
+    "tenant_id": "acme-corp",
+    "user_data_dir": "../user_data/acme-corp",
+    "allowed_origins": ["https://www.acme.com", "https://acme.com"]
+  },
+  "wgt-sergei-v1": {
+    "tenant_id": "sergei-corp",
+    "user_data_dir": "../user_data/sergei",
+    "allowed_origins": ["http://localhost:3000", "http://localhost:8000"]
+  },
+  "creatium-widget": {
+    "tenant_id": "pasha",
+    "user_data_dir": "../user_data/pasha",
+    "allowed_origins": ["http://localhost:3000", "http://localhost:8000", "https://creatium.com", "https://www.creatium.com"]
+  },
+  "creatium-alexey-widget": {
+    "tenant_id": "alexey",
+    "user_data_dir": "../user_data/alexey",
+    "allowed_origins": ["https://creatium.com", "https://www.creatium.com", "https://myneurobot.onrender.com"]
+  }
+}

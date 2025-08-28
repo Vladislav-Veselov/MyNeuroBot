@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Session manager for IP-based session tracking.
+Session manager for IP-based session tracking with tenant isolation.
 """
 
 import hashlib
 from typing import Dict, Any, Optional
 from flask import request
 from datetime import datetime
+from tenant_context import get_current_tenant_id
 
 class IPSessionManager:
     def __init__(self):
@@ -22,25 +23,30 @@ class IPSessionManager:
         else:
             return request.remote_addr
     
+    def _namespaced_key(self, ip: str) -> str:
+        """Create a tenant-aware session key."""
+        tenant_id = get_current_tenant_id()
+        return f"{tenant_id}::{ip}"
+    
     def get_ip_hash(self, ip: str) -> str:
         """Create a hash of the IP address for consistent identification."""
         return hashlib.md5(ip.encode()).hexdigest()[:16]
     
     def get_session_id_for_ip(self, ip: str) -> Optional[str]:
         """Get the session ID for a given IP address."""
-        ip_hash = self.get_ip_hash(ip)
-        return self.ip_sessions.get(ip_hash)
+        key = self._namespaced_key(ip)
+        return self.ip_sessions.get(key)
     
     def set_session_id_for_ip(self, ip: str, session_id: str) -> None:
         """Set the session ID for a given IP address."""
-        ip_hash = self.get_ip_hash(ip)
-        self.ip_sessions[ip_hash] = session_id
+        key = self._namespaced_key(ip)
+        self.ip_sessions[key] = session_id
     
     def clear_session_for_ip(self, ip: str) -> None:
         """Clear the session for a given IP address."""
-        ip_hash = self.get_ip_hash(ip)
-        if ip_hash in self.ip_sessions:
-            del self.ip_sessions[ip_hash]
+        key = self._namespaced_key(ip)
+        if key in self.ip_sessions:
+            del self.ip_sessions[key]
     
     def get_current_ip_session_id(self) -> Optional[str]:
         """Get the session ID for the current request's IP address."""
