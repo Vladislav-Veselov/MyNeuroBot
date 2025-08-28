@@ -13,6 +13,11 @@ def create_app():
     backend_dir = Path(__file__).resolve().parent.parent
     frontend_dir = backend_dir.parent / "Frontend"
     
+    # Add Backend directory to Python path for imports
+    import sys
+    if str(backend_dir) not in sys.path:
+        sys.path.insert(0, str(backend_dir))
+    
     # Initialize Flask app with absolute paths
     app = Flask(__name__, 
                 template_folder=str(frontend_dir / "templates"),
@@ -26,7 +31,7 @@ def create_app():
          allow_headers=["Content-Type", "Authorization", "X-Requested-With"])  # Allow necessary headers
 
     # Configure CORS for public widget routes with origin validation
-    from widget_registry import resolve_widget
+    # Note: widget_registry import is not used in this function, so we can remove it
     
     # Apply CORS specifically to public widget routes
     CORS(app, 

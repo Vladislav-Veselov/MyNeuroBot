@@ -39,13 +39,18 @@ else:
 # List contents of user_data directory
 print(f"Contents of {user_data_dir}: {list(user_data_dir.iterdir()) if user_data_dir.exists() else 'Directory does not exist'}")
 
+# Import and create the Flask app
 try:
-    from app import app
+    from app import create_app
+    app = create_app()
 except ImportError as e:
-    print(f"Import error: {e}")
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Python path: {sys.path}")
-    raise
+    print(f"Failed to import create_app: {e}")
+    # Try alternative import path
+    import sys
+    sys.path.insert(0, str(backend_dir))
+    from app import create_app
+    app = create_app()
+    print("Successfully imported using alternative path")
 
 if __name__ == "__main__":
     app.run()
