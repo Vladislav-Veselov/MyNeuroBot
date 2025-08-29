@@ -19,13 +19,13 @@
       "context_window": 128000
     }
   },
-  "last_updated": "2025-08-28T13:19:35.993990+03:00",
+  "last_updated": "2025-08-29T14:03:19.685645+03:00",
   "source": "OpenAI Pricing (Auto-fetched)",
   "notes": "Prices are per 1K tokens. Input tokens are what you send to the model, output tokens are what the model generates. Updated automatically every 24 hours.",
   "exchange_rates": {
-    "USD_to_RUB": 80.36,
+    "USD_to_RUB": 80.33,
     "RUB_to_USD": 0.0124,
-    "last_updated": "2025-08-28T13:19:35.991714+03:00",
+    "last_updated": "2025-08-29T14:03:19.684449+03:00",
     "source": "Exchange Rate API"
   },
   "markup_coefficient": 1.7,

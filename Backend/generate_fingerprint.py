@@ -6,36 +6,25 @@ from pathlib import Path
 
 # Use relative paths for production deployment
 BASE_DIR = Path(__file__).resolve().parent.parent
-KNOWLEDGE_FILE = BASE_DIR / "user_data" / "admin" / "knowledge.txt"
+KNOWLEDGE_FILE = BASE_DIR / "user_data" / "admin" / "knowledge.json"
 FINGERPRINT_FILE = BASE_DIR / "user_data" / "admin" / "last_fingerprint.json"
 
 def compute_document_hash(content: str) -> str:
     """Compute a SHA-256 hash for a document block."""
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
-def split_qa_pairs(text: str):
-    """Split the raw text into separate Q&A blocks."""
-    pairs = []
-    current = []
-    for line in text.splitlines():
-        if line.startswith("Вопрос:") and current:
-            pairs.append("\n".join(current))
-            current = [line]
-        else:
-            current.append(line)
-    if current:
-        pairs.append("\n".join(current))
-    return pairs
+
 
 def main():
-    txt = KNOWLEDGE_FILE.read_text(encoding="utf-8")
-    pairs = split_qa_pairs(txt)
-
+    data = json.loads(KNOWLEDGE_FILE.read_text(encoding="utf-8")) if KNOWLEDGE_FILE.exists() else []
+    
     fingerprint = {}
-    for block in pairs:
-        # extract the question line after "Вопрос:"
-        if "Вопрос:" in block:
-            question = block.split("Вопрос:")[1].splitlines()[0].strip()
+    for item in data:
+        question = (item.get("question") or "").strip()
+        answer = (item.get("answer") or "").strip()
+        if question:
+            # recreate the same "block" string used for embeddings/fingerprint
+            block = f"Вопрос: {question}\n{answer}"
             fingerprint[question] = compute_document_hash(block)
 
     FINGERPRINT_FILE.write_text(

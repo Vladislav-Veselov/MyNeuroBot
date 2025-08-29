@@ -111,8 +111,8 @@ class UserAuth:
             json.dump(kb_info, f, ensure_ascii=False, indent=2)
         
         # Create empty knowledge file
-        with open(default_kb_dir / "knowledge.txt", 'w', encoding='utf-8') as f:
-            f.write("")
+        with open(default_kb_dir / "knowledge.json", 'w', encoding='utf-8') as f:
+            f.write("[]")
         
         # Create vector store directory
         (default_kb_dir / "vector_KB").mkdir(exist_ok=True)

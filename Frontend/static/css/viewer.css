@@ -486,10 +486,70 @@ input::placeholder, textarea::placeholder {
         font-size: 1.25rem;
     }
     
-    #document-modal .max-w-4xl {
-        margin: 1rem;
-        max-height: calc(100vh - 2rem);
-    }
+    /* Document modal specific styles for proper scrolling */
+#document-modal {
+    padding: 1rem;
+}
+
+#document-modal > div {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: calc(100vh - 2rem) !important;
+    overflow: hidden !important;
+}
+
+#document-modal #modal-content {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+}
+
+#document-modal #modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+#document-modal #modal-content::-webkit-scrollbar-track {
+    background: #2D3446;
+    border-radius: 4px;
+}
+
+#document-modal #modal-content::-webkit-scrollbar-thumb {
+    background: #4A5568;
+    border-radius: 4px;
+}
+
+#document-modal #modal-content::-webkit-scrollbar-thumb:hover {
+    background: #718096;
+}
+
+/* Ensure content doesn't overflow horizontally */
+#document-modal .question-section,
+#document-modal .answer-section {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+#document-modal .bg-\[#2D3446\] {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    max-width: 100%;
+}
+
+/* Ensure proper spacing and layout */
+#document-modal .space-y-6 > div:last-child {
+    margin-bottom: 0;
+}
+
+#document-modal .bg-\[#2D3446\] {
+    line-height: 1.6;
+}
+
+/* Improve readability for long text */
+#document-modal .answer-section .bg-\[#2D3446\] {
+    font-size: 0.95rem;
 }
 
 /* Modal overlay background for better readability */
@@ -551,7 +611,46 @@ input::placeholder, textarea::placeholder {
     }
 }
 
+/* Document modal responsive styles */
+@media (max-width: 768px) {
+    #document-modal {
+        padding: 0.5rem;
+    }
+    
+    #document-modal > div {
+        max-width: calc(100vw - 1rem);
+        max-height: calc(100vh - 1rem);
+        margin: 0;
+    }
+    
+    #document-modal .p-6 {
+        padding: 1rem;
+    }
+    
+    #document-modal #modal-content {
+        padding: 1rem;
+    }
+}
+
 @media (max-width: 480px) {
+    #document-modal {
+        padding: 0.25rem;
+    }
+    
+    #document-modal > div {
+        max-width: calc(100vw - 0.5rem);
+        max-height: calc(100vh - 0.5rem);
+        border-radius: 0.5rem;
+    }
+    
+    #document-modal .p-6 {
+        padding: 0.75rem;
+    }
+    
+    #document-modal #modal-content {
+        padding: 0.75rem;
+    }
+    
     #help-modal > div {
         max-width: 100vw !important;
         max-height: 100vh !important;
@@ -611,4 +710,26 @@ input::placeholder, textarea::placeholder {
     background-color: rgba(16, 185, 129, 0.1);
     border: 1px solid rgba(16, 185, 129, 0.2);
     margin-top: 0.5rem;
+}
+
+/* Force solid backgrounds for all modal content areas */
+#document-modal #modal-content,
+#add-qa-modal .p-6,
+#edit-qa-modal .p-6,
+#delete-confirm-modal .p-6,
+#create-kb-modal .p-6,
+#kb-details-modal .p-6 {
+    background-color: #242A36 !important;
+    opacity: 1 !important;
+}
+
+/* Force solid backgrounds for all modal headers */
+#document-modal .p-6.border-b,
+#add-qa-modal .p-6,
+#edit-qa-modal .p-6,
+#delete-confirm-modal .p-6,
+#create-kb-modal .p-6,
+#kb-details-modal .p-6 {
+    background-color: #242A36 !important;
+    opacity: 1 !important;
 } 

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-[#1A1E27]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Scroll Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/viewer.css">
+</head>
+<body class="h-full bg-[#1A1E27] text-white">
+    <div class="min-h-full p-8">
+        <h1 class="text-2xl font-bold mb-4">Modal Scroll Test</h1>
+        <button id="test-modal-btn" class="bg-[#DC4918] hover:bg-[#B93E14] text-white px-4 py-2 rounded-lg">
+            Open Test Modal
+        </button>
+    </div>
+
+    <!-- Document modal -->
+    <div id="document-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-[#2D3446] flex-shrink-0">
+                <div class="flex justify-between items-start">
+                    <h3 class="text-xl font-semibold text-white">Просмотр вопроса</h3>
+                    <button id="close-modal" class="text-[#718096] hover:text-white">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="modal-content" class="p-6 overflow-y-auto flex-1">
+                <!-- Test content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('document-modal');
+        const modalContent = document.getElementById('modal-content');
+        const testBtn = document.getElementById('test-modal-btn');
+        const closeBtn = document.getElementById('close-modal');
+
+        // Generate very long test content
+        function generateLongContent() {
+            const longQuestion = "Это очень длинный вопрос, который демонстрирует, как будет выглядеть текст в модальном окне при большом количестве символов. Вопрос содержит много деталей и может быть очень длинным, чтобы проверить работу прокрутки в модальном окне.";
+            
+            let longAnswer = "Это очень длинный ответ, который демонстрирует работу прокрутки в модальном окне.\n\n";
+            
+            // Add many paragraphs to make it scrollable
+            for (let i = 1; i <= 50; i++) {
+                longAnswer += `Параграф ${i}: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n\n`;
+            }
+            
+            longAnswer += "Конец длинного ответа. Теперь вы можете прокручивать содержимое модального окна.";
+            
+            return { question: longQuestion, answer: longAnswer };
+        }
+
+        function showTestModal() {
+            const content = generateLongContent();
+            
+            modalContent.innerHTML = `
+                <div class="space-y-6">
+                    <div class="question-section">
+                        <h4 class="text-lg font-semibold text-[#DC4918] mb-2">Вопрос</h4>
+                        <div class="bg-[#2D3446] p-4 rounded-lg">
+                            ${content.question}
+                        </div>
+                    </div>
+                    <div class="answer-section">
+                        <h4 class="text-lg font-semibold text-[#DC4918] mb-2">Ответ</h4>
+                        <div class="bg-[#2D3446] p-4 rounded-lg whitespace-pre-line">
+                            ${content.answer}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Ensure modal content scrolls to top
+            modalContent.scrollTop = 0;
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        testBtn.addEventListener('click', showTestModal);
+        closeBtn.addEventListener('click', closeModal);
+        
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

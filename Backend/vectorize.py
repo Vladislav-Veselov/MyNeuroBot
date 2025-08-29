@@ -80,7 +80,7 @@ def main_with_context(user_data_dir: str, current_kb_id: str):
     user_data_dir = Path(user_data_dir)
     current_kb_id = str(current_kb_id)
 
-    KNOWLEDGE_FILE = user_data_dir / "knowledge_bases" / current_kb_id / "knowledge.txt"
+    KNOWLEDGE_FILE = user_data_dir / "knowledge_bases" / current_kb_id / "knowledge.json"
     FINGERPRINT_FILE = user_data_dir / "knowledge_bases" / current_kb_id / "last_fingerprint.json"
     VECTOR_STORE_DIR = user_data_dir / "knowledge_bases" / current_kb_id / "vector_KB"
     INDEX_FILE = VECTOR_STORE_DIR / "index.faiss"
@@ -96,18 +96,15 @@ def main_with_context(user_data_dir: str, current_kb_id: str):
         old_fp = {}
 
     # 5) Read & hash current Q&A
-    txt = KNOWLEDGE_FILE.read_text(encoding="utf-8")
-    blocks = split_qa_pairs(txt)
+    data = json.loads(KNOWLEDGE_FILE.read_text(encoding="utf-8")) if KNOWLEDGE_FILE.exists() else []
+    # normalize
+    records = [( (item.get("question") or "").strip(), (item.get("answer") or "").strip() ) for item in data]
 
-    new_fp = {}
-    q2block = {}
-    for blk in blocks:
-        if "Вопрос:" not in blk:
-            continue
-        q = extract_question(blk)
-        h = compute_document_hash(blk)
-        new_fp[q] = h
-        q2block[q] = blk
+    # recreate the same "block" string used for embeddings/fingerprint
+    q2block = {q: f"Вопрос: {q}\n{a}" for q, a in records if q}
+
+    # compute new fingerprint by question → hash(block)
+    new_fp = {q: compute_document_hash(block) for q, block in q2block.items()}
 
     old_qs = set(old_fp)
     new_qs = set(new_fp)

@@ -87,10 +87,16 @@ def setup_user():
     print(f"✓ KB info created: {kb_info_file}")
     
     # Create knowledge file
-    knowledge_file = default_kb_dir / "knowledge.txt"
+    knowledge_file = default_kb_dir / "knowledge.json"
     if not knowledge_file.exists():
+        initial_data = [
+            {
+                "question": "Как вас зовут?",
+                "answer": "Меня зовут NeuroBot Assistant. Я готов помочь вам с вопросами."
+            }
+        ]
         with open(knowledge_file, 'w', encoding='utf-8') as f:
-            f.write("Вопрос: Как вас зовут?\nОтвет: Меня зовут NeuroBot Assistant. Я готов помочь вам с вопросами.")
+            json.dump(initial_data, f, ensure_ascii=False, indent=2)
         print(f"✓ Knowledge file created: {knowledge_file}")
     
     # Create current KB file

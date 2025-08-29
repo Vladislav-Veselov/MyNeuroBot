@@ -189,9 +189,9 @@
 
     <!-- Document modal -->
     <div id="document-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="p-6">
-                <div class="flex justify-between items-start mb-4">
+        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-4xl w-full mx-4" style="max-height: 90vh; overflow: hidden;">
+            <div class="p-6 border-b border-[#2D3446]" style="flex-shrink: 0; background-color: #242A36 !important;">
+                <div class="flex justify-between items-start">
                     <h3 class="text-xl font-semibold text-white">Просмотр вопроса</h3>
                     <button id="close-modal" class="text-[#718096] hover:text-white">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,9 +199,9 @@
                         </svg>
                     </button>
                 </div>
-                <div id="modal-content" class="space-y-4">
-                    <!-- Content will be inserted here -->
-                </div>
+            </div>
+            <div id="modal-content" class="p-6" style="max-height: calc(90vh - 120px); overflow-y: auto; overflow-x: hidden; background-color: #242A36 !important;">
+                <!-- Content will be inserted here -->
             </div>
         </div>
     </div>
@@ -209,7 +209,7 @@
     <!-- Add Q&A modal -->
     <div id="add-qa-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-[#242A36] rounded-lg shadow-xl max-w-2xl w-full mx-4">
-            <div class="p-6">
+            <div class="p-6" style="background-color: #242A36 !important;">
                 <div class="flex justify-between items-start mb-4">
                     <h3 class="text-xl font-semibold text-white">Добавить вопрос и ответ</h3>
                     <button id="close-add-qa-modal" class="text-[#718096] hover:text-white">
@@ -244,7 +244,7 @@
     <!-- Edit Q&A modal -->
     <div id="edit-qa-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-[#242A36] rounded-lg shadow-xl max-w-2xl w-full mx-4">
-            <div class="p-6">
+            <div class="p-6" style="background-color: #242A36 !important;">
                 <div class="flex justify-between items-start mb-4">
                     <h3 class="text-xl font-semibold text-white">Редактировать вопрос и ответ</h3>
                     <button id="close-edit-qa-modal" class="text-[#718096] hover:text-white">
@@ -280,7 +280,7 @@
     <!-- Delete confirmation modal -->
     <div id="delete-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-[#242A36] rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div class="p-6">
+            <div class="p-6" style="background-color: #242A36 !important;">
                 <div class="flex justify-between items-start mb-4">
                     <h3 class="text-xl font-semibold text-white">Подтверждение удаления</h3>
                     <button id="close-delete-modal" class="text-[#718096] hover:text-white">

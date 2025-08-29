@@ -5,7 +5,7 @@ import json
 import re
 import uuid
 from datetime import datetime
-from vectorize import rebuild_vector_store, split_qa_pairs, extract_question
+from vectorize import rebuild_vector_store
 
 kb_api_bp = Blueprint('kb_api', __name__)
 
@@ -67,50 +67,38 @@ def get_knowledge_file_path(kb_id: str = None) -> Path:
     
     user_data_dir = get_current_user_data_dir()
     kb_dir = user_data_dir / "knowledge_bases" / kb_id
-    return kb_dir / "knowledge.txt"
+    return kb_dir / "knowledge.json"
 
-def parse_knowledge_file(kb_id: str = None) -> list:
-    """Parse the knowledge.txt into robust Q&A pairs using 'Вопрос:' headers."""
+def read_knowledge_file(kb_id: str = None) -> list[dict]:
+    """Read Q&A list from JSON file (no parsing, no splitting)."""
+    path = get_knowledge_file_path(kb_id)
+    if not path.exists():
+        return []
     try:
-        knowledge_file = get_knowledge_file_path(kb_id)
-        if not knowledge_file.exists():
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, list):
             return []
-
-        content = knowledge_file.read_text(encoding='utf-8')
+        out = []
+        for i, item in enumerate(data):
+            q = (item.get("question") or "").strip()
+            a = (item.get("answer") or "").strip()
+            out.append({"id": i, "question": q, "answer": a, "content": f"Вопрос: {q}\n{a}"})
+        return out
     except Exception as e:
-        print(f"Error parsing knowledge file: {str(e)}")
+        print(f"Error reading knowledge file: {str(e)}")
         return []
 
-    qa_pairs = []
-    blocks = split_qa_pairs(content)  # SAME logic as vectorize.py
-
-    for blk in blocks:
-        if "Вопрос:" not in blk:
-            continue
-
-        # question: first line after "Вопрос:"
-        question = extract_question(blk)
-
-        # answer: everything after the "Вопрос:" line (preserve paragraphs)
-        lines = blk.splitlines()
-        # find the header line index to be safe if there are leading blanks
-        start_idx = next((i for i, line in enumerate(lines) if line.startswith("Вопрос:")), None)
-        answer = ""
-        if start_idx is not None and start_idx + 1 < len(lines):
-            answer = "\n".join(lines[start_idx + 1:]).strip()
-
-        qa_pairs.append({
-            "id": len(qa_pairs),  # continuous 0..N-1
-            "question": question,
-            "answer": answer,
-            "content": f"Вопрос: {question}\n{answer}"
-        })
-
-    return qa_pairs
+def write_knowledge_file(documents: list[dict], kb_id: str | None = None) -> None:
+    """Write Q&A list to JSON file."""
+    path = get_knowledge_file_path(kb_id)
+    # keep only the fields we need to persist
+    payload = [{"question": d["question"], "answer": d["answer"]} for d in documents]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 def get_all_documents() -> list:
     """Get all Q&A pairs from the knowledge file."""
-    return parse_knowledge_file()
+    return read_knowledge_file()
 
 # API Routes
 @kb_api_bp.route('/documents')
@@ -241,8 +229,8 @@ def create_knowledge_base():
         with open(kb_dir / "kb_info.json", 'w', encoding='utf-8') as f:
             json.dump(kb_info, f, ensure_ascii=False, indent=2)
         
-        with open(kb_dir / "knowledge.txt", 'w', encoding='utf-8') as f:
-            f.write("")
+        with open(kb_dir / "knowledge.json", 'w', encoding='utf-8') as f:
+            f.write("[]")
         
         vector_dir = kb_dir / "vector_KB"
         vector_dir.mkdir(exist_ok=True)
@@ -492,164 +480,90 @@ def get_stats():
 @login_required
 def add_qa():
     data = request.get_json()
-    question = (data.get('question') or '').strip()
-    answer = (data.get('answer') or '').strip()
+    q = (data.get('question') or '').strip()
+    a = (data.get('answer') or '').strip()
+    if not q: return jsonify({'error': 'Пожалуйста, введите вопрос.'}), 400
+    if not a: return jsonify({'error': 'Пожалуйста, введите ответ.'}), 400
 
-    # Validate input
-    if not question:
-        return jsonify({'error': 'Пожалуйста, введите вопрос.'}), 400
-    if not answer:
-        return jsonify({'error': 'Пожалуйста, введите ответ.'}), 400
+    docs = read_knowledge_file()
+    docs.append({'id': len(docs), 'question': q, 'answer': a})
+    write_knowledge_file(docs)
 
-    # Format the new Q&A block
-    new_block = f"Вопрос: {question}\n{answer}\n\n"
-    try:
-        user_data_dir = get_current_user_data_dir()
-        current_kb_id = get_current_kb_id()
-        knowledge_file = get_knowledge_file_path()
-        
-        with open(knowledge_file, 'a', encoding='utf-8') as f:
-            f.write(new_block)
-        
-        # Rebuild vector store after adding new Q&A
-        # Pass the user and KB context to avoid Flask context issues
-        from vectorize import rebuild_vector_store_with_context
-        rebuild_vector_store_with_context(str(user_data_dir), current_kb_id)
-        
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': f'Ошибка при добавлении: {str(e)}'}), 500
+    from vectorize import rebuild_vector_store_with_context
+    user_dir = get_current_user_data_dir()
+    kb_id = get_current_kb_id()
+    rebuild_vector_store_with_context(str(user_dir), kb_id)
+    return jsonify({'success': True})
 
 @kb_api_bp.route('/document/<int:doc_id>', methods=['PUT'])
 @login_required
 def update_document(doc_id: int):
-    """API endpoint to update a specific document."""
-    try:
-        data = request.get_json()
-        question = (data.get('question') or '').strip()
-        answer = (data.get('answer') or '').strip()
+    data = request.get_json()
+    q = (data.get('question') or '').strip()
+    a = (data.get('answer') or '').strip()
+    if not q: return jsonify({'error': 'Пожалуйста, введите вопрос.'}), 400
+    if not a: return jsonify({'error': 'Пожалуйста, введите ответ.'}), 400
 
-        # Validate input
-        if not question:
-            return jsonify({'error': 'Пожалуйста, введите вопрос.'}), 400
-        if not answer:
-            return jsonify({'error': 'Пожалуйста, введите ответ.'}), 400
+    docs = read_knowledge_file()
+    if not (0 <= doc_id < len(docs)):
+        return jsonify({'error': 'Документ не найден'}), 404
 
-        # Get current documents
-        documents = get_all_documents()
-        
-        # Validate document ID
-        if not (0 <= doc_id < len(documents)):
-            return jsonify({'error': 'Документ не найден'}), 404
+    docs[doc_id]['question'] = q
+    docs[doc_id]['answer'] = a
+    write_knowledge_file(docs)
 
-        # Update the document
-        documents[doc_id] = {
-            'id': doc_id,
-            'question': question,
-            'answer': answer
-        }
-
-        # Save back to file
-        save_knowledge_file(documents)
-
-        # Rebuild vector store
-        # Pass the user and KB context to avoid Flask context issues
-        from vectorize import rebuild_vector_store_with_context
-        user_data_dir = get_current_user_data_dir()
-        current_kb_id = get_current_kb_id()
-        rebuild_vector_store_with_context(str(user_data_dir), current_kb_id)
-
-        return jsonify({'success': True})
-
-    except Exception as e:
-        print(f"Error in update_document endpoint: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+    from vectorize import rebuild_vector_store_with_context
+    user_dir = get_current_user_data_dir()
+    kb_id = get_current_kb_id()
+    rebuild_vector_store_with_context(str(user_dir), kb_id)
+    return jsonify({'success': True})
 
 @kb_api_bp.route('/document/<int:doc_id>', methods=['DELETE'])
 @login_required
 def delete_document(doc_id: int):
-    """API endpoint to delete a specific document."""
-    try:
-        # Get current documents
-        documents = get_all_documents()
-        
-        # Validate document ID
-        if not (0 <= doc_id < len(documents)):
-            return jsonify({'error': 'Документ не найден'}), 404
+    docs = read_knowledge_file()
+    if not (0 <= doc_id < len(docs)):
+        return jsonify({'error': 'Документ не найден'}), 404
 
-        # Remove the document
-        documents.pop(doc_id)
+    docs.pop(doc_id)
+    for i, d in enumerate(docs):  # keep sequential ids for the UI
+        d['id'] = i
+    write_knowledge_file(docs)
 
-        # Update IDs for remaining documents
-        for i, doc in enumerate(documents):
-            doc['id'] = i
+    from vectorize import rebuild_vector_store_with_context
+    user_dir = get_current_user_data_dir()
+    kb_id = get_current_kb_id()
+    rebuild_vector_store_with_context(str(user_dir), kb_id)
+    return jsonify({'success': True})
 
-        # Save back to file
-        save_knowledge_file(documents)
 
-        # Rebuild vector store
-        # Pass the user and KB context to avoid Flask context issues
-        from vectorize import rebuild_vector_store_with_context
-        user_data_dir = get_current_user_data_dir()
-        current_kb_id = get_current_kb_id()
-        rebuild_vector_store_with_context(str(user_data_dir), current_kb_id)
-
-        return jsonify({'success': True})
-
-    except Exception as e:
-        print(f"Error in delete_document endpoint: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-def save_knowledge_file(documents: list) -> None:
-    """Save the list of Q&A pairs back to the knowledge file."""
-    try:
-        user_data_dir = get_current_user_data_dir()
-        current_kb_id = get_current_kb_id()
-        knowledge_file = get_knowledge_file_path()
-        
-        content = '\n\n'.join(
-            f"Вопрос: {doc['question']}\n{doc['answer']}" for doc in documents
-        ).rstrip() + '\n\n'
-        
-        knowledge_file.write_text(content, encoding='utf-8')
-    except Exception as e:
-        print(f"Error saving knowledge file: {str(e)}")
 
 @kb_api_bp.route('/knowledge-bases/<kb_id>/download', methods=['GET'])
 @login_required
 def download_knowledge_file(kb_id):
-    """API endpoint to download the knowledge.txt file for a specific knowledge base."""
-    try:
-        user_data_dir = get_current_user_data_dir()
-        kb_dir = user_data_dir / "knowledge_bases" / kb_id
-        
-        if not kb_dir.exists():
-            return jsonify({'error': 'База знаний не найдена'}), 404
-        
-        knowledge_file = kb_dir / "knowledge.txt"
-        if not knowledge_file.exists():
-            return jsonify({'error': 'Файл знаний не найден'}), 404
-        
-        kb_info_file = kb_dir / "kb_info.json"
-        kb_name = kb_id
-        if kb_info_file.exists():
-            with open(kb_info_file, 'r', encoding='utf-8') as f:
-                kb_info = json.load(f)
-                kb_name = kb_info.get('name', kb_id)
-        
-        safe_filename = "".join(c for c in kb_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        safe_filename = safe_filename.replace(' ', '_')
-        
-        return send_from_directory(
-            kb_dir, 
-            'knowledge.txt',
-            as_attachment=True,
-            download_name=f"{safe_filename}_knowledge.txt"
-        )
-        
-    except Exception as e:
-        print(f"Error downloading knowledge file for KB {kb_id}: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+    user_data_dir = get_current_user_data_dir()
+    kb_dir = user_data_dir / "knowledge_bases" / kb_id
+    if not kb_dir.exists():
+        return jsonify({'error': 'База знаний не найдена'}), 404
+
+    knowledge_file = kb_dir / "knowledge.json"
+    if not knowledge_file.exists():
+        return jsonify({'error': 'Файл знаний не найден'}), 404
+
+    kb_info_file = kb_dir / "kb_info.json"
+    kb_name = kb_id
+    if kb_info_file.exists():
+        with open(kb_info_file, 'r', encoding='utf-8') as f:
+            kb_info = json.load(f)
+            kb_name = kb_info.get('name', kb_id)
+
+    safe = "".join(c for c in kb_name if c.isalnum() or c in (' ', '-', '_')).rstrip().replace(' ', '_')
+    return send_from_directory(
+        kb_dir,
+        'knowledge.json',
+        as_attachment=True,
+        download_name=f"{safe}_knowledge.json"
+    )
 
 @kb_api_bp.route('/save_settings', methods=['POST'])
 @login_required

@@ -255,6 +255,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
+                
+                // Ensure modal content scrolls to top after content is rendered
+                setTimeout(() => {
+                    modalContent.scrollTop = 0;
+                    console.log('Modal opened, content height:', modalContent.scrollHeight);
+                    console.log('Modal content max-height:', modalContent.style.maxHeight);
+                    console.log('Modal content overflow:', modalContent.style.overflowY);
+                    
+                    // Debug header background
+                    const modalHeader = modal.querySelector('.p-6.border-b');
+                    if (modalHeader) {
+                        console.log('Modal header background:', modalHeader.style.backgroundColor);
+                        console.log('Modal header computed background:', window.getComputedStyle(modalHeader).backgroundColor);
+                    }
+                }, 100);
             })
             .catch(error => {
                 console.error('Error fetching document:', error);
@@ -291,6 +306,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
+        
+        // Ensure modal content scrolls to top after content is rendered
+        setTimeout(() => {
+            modalContent.scrollTop = 0;
+            console.log('Modal opened from card, content height:', modalContent.scrollHeight);
+            console.log('Modal content max-height:', modalContent.style.maxHeight);
+            console.log('Modal content overflow:', modalContent.style.overflowY);
+            
+            // Debug header background
+            const modalHeader = modal.querySelector('.p-6.border-b');
+            if (modalHeader) {
+                console.log('Modal header background:', modalHeader.style.backgroundColor);
+                console.log('Modal header computed background:', window.getComputedStyle(modalHeader).backgroundColor);
+            }
+        }, 100);
     }
 
     // Event handlers
