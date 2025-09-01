@@ -47,8 +47,9 @@ def _clamp_0_4(value):
 @public_custom_widget_api_bp.route("/public/custom-widget/<widget_id>/chatbot", methods=["OPTIONS"])
 def public_custom_chatbot_options(widget_id):
     widget = resolve_widget(widget_id)
-    # Empty 204 with CORS headers is enough for preflight
-    return _corsify(("",), widget=widget, status=204)
+    # Return an empty body (string), not a tuple
+    return _corsify("", widget=widget, status=204)
+
 
 @public_custom_widget_api_bp.route("/public/custom-widget/<widget_id>/chatbot", methods=["POST"])
 def public_custom_chatbot(widget_id):
