@@ -39,6 +39,13 @@ def create_app():
          supports_credentials=False,  # No cookies needed for public widgets
          methods=["GET", "POST", "OPTIONS"],
          allow_headers=["Content-Type", "X-Requested-With"])
+    
+    # Apply CORS specifically to public custom widget routes
+    CORS(app, 
+         resources={r"/public/custom-widget/*": {"origins": "*"}},  # Allow all origins for custom widgets
+         supports_credentials=False,  # No cookies needed for custom widgets
+         methods=["GET", "POST", "OPTIONS"],
+         allow_headers=["Content-Type", "X-Requested-With"])
 
     # Configure session
     app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
@@ -51,10 +58,12 @@ def create_app():
     from .blueprints.dialogues_api import dialogues_api_bp
     from .blueprints.admin_api import admin_api_bp
     from .blueprints.public_widget_api import public_chatbot_api_bp
+    from .blueprints.public_custom_widget_api import public_custom_widget_api_bp
 
 
 
     app.register_blueprint(public_chatbot_api_bp)
+    app.register_blueprint(public_custom_widget_api_bp)
     app.register_blueprint(pages_bp)
     app.register_blueprint(auth_api_bp, url_prefix='/api')
     app.register_blueprint(kb_api_bp, url_prefix='/api')

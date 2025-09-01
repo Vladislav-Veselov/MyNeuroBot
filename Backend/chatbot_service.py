@@ -14,6 +14,7 @@ from session_manager import ip_session_manager
 from data_masking import data_masker
 from model_manager import model_manager
 from balance_manager import balance_manager
+from tenant_context import get_widget_settings_override  # NEW import
 
 # Load environment variables
 load_dotenv(override=True)
@@ -36,40 +37,59 @@ class ChatbotService:
         self.conversation_history = []
         
     def get_settings(self) -> Dict[str, Any]:
-        """Get chatbot settings from file for current KB."""
+        """Get chatbot settings from file for current KB, with optional per-request overrides."""
         try:
             from auth import get_current_user_data_dir
             user_data_dir = get_current_user_data_dir()
             current_kb_id, _ = self.get_current_kb_info()
-            
+
             # Use current KB's settings file
             kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
             system_prompt_file = kb_dir / "system_prompt.txt"
-            
-            if not system_prompt_file.exists():
-                return {
-                    'tone': 2,
-                    'humor': 2,
-                    'brevity': 2,
-                    'additional_prompt': ''
-                }
-            
-            with open(system_prompt_file, 'r', encoding='utf-8') as f:
-                settings = json.load(f)
-                
-            # Handle legacy settings (convert string tone to numeric)
-            if isinstance(settings.get('tone'), str):
-                tone_mapping = {'formal': 0, 'friendly': 2, 'casual': 4}
-                settings['tone'] = tone_mapping.get(settings['tone'], 2)
-                
+
+            # defaults
+            settings = {
+                "tone": 2,
+                "humor": 2,
+                "brevity": 2,
+                "additional_prompt": ""
+            }
+
+            if system_prompt_file.exists():
+                with open(system_prompt_file, "r", encoding="utf-8") as f:
+                    file_settings = json.load(f)
+                # Handle legacy string tone in file
+                if isinstance(file_settings.get("tone"), str):
+                    tone_mapping = {"formal": 0, "friendly": 2, "casual": 4}
+                    file_settings["tone"] = tone_mapping.get(file_settings["tone"], 2)
+                settings.update(file_settings)
+
+            # NEW: apply per-request override from custom widget (tone/humor/brevity only)
+            override = get_widget_settings_override()
+            if override:
+                def _coerce_0_4(v, default):
+                    try:
+                        iv = int(v)
+                        return max(0, min(4, iv))
+                    except (TypeError, ValueError):
+                        return default
+                if "tone" in override:
+                    settings["tone"] = _coerce_0_4(override["tone"], settings["tone"])
+                if "humor" in override:
+                    settings["humor"] = _coerce_0_4(override["humor"], settings["humor"])
+                if "brevity" in override:
+                    settings["brevity"] = _coerce_0_4(override["brevity"], settings["brevity"])
+                # NOTE: additional_prompt is intentionally NOT overridden
+
             return settings
+
         except Exception as e:
             print(f"Error loading settings: {str(e)}")
             return {
-                'tone': 2,
-                'humor': 2,
-                'brevity': 2,
-                'additional_prompt': ''
+                "tone": 2,
+                "humor": 2,
+                "brevity": 2,
+                "additional_prompt": ""
             }
     
     def get_vector_store(self):

@@ -1,11 +1,16 @@
 # tenant_context.py
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 
 _current_user_data_dir: ContextVar[Optional[Path]] = ContextVar("current_user_data_dir", default=None)
 _current_kb_id: ContextVar[Optional[str]] = ContextVar("current_kb_id", default=None)
 _current_tenant_id: ContextVar[str] = ContextVar("current_tenant_id", default="public-default")
+
+# NEW: per-request widget persona override (tone/humor/brevity)
+_current_widget_settings_override: ContextVar[Optional[Dict[str, int]]] = ContextVar(
+    "current_widget_settings_override", default=None
+)
 
 def set_user_data_dir(path: Path):
     _current_user_data_dir.set(Path(path))
@@ -30,3 +35,16 @@ def set_current_tenant_id(tenant_id: str):
 
 def get_current_tenant_id() -> str:
     return _current_tenant_id.get()
+
+# NEW: persona override helpers
+def set_widget_settings_override(settings: Dict[str, int]):
+    """
+    Expected keys: tone, humor, brevity (0..4).
+    """
+    _current_widget_settings_override.set(settings or {})
+
+def get_widget_settings_override() -> Optional[Dict[str, int]]:
+    return _current_widget_settings_override.get()
+
+def clear_widget_settings_override():
+    _current_widget_settings_override.set(None)
