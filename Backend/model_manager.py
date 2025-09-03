@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Optional
 from auth import get_current_user_data_dir
+from tenant_context import get_model_override  # NEW
 
 class ModelManager:
     def __init__(self):
@@ -27,21 +28,24 @@ class ModelManager:
             return None
     
     def get_current_model(self) -> str:
-        """Get the current model for the user."""
+        """Get the current model for the user (respects per-request override)."""
         try:
+            # NEW: take override if present and valid
+            override = get_model_override()
+            if override and override in self.available_models:
+                return override
+
             model_file = self.get_model_file_path()
             if not model_file or not model_file.exists():
-                # Default model
                 return self.default_model
-            
+
             with open(model_file, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-            
+
             model = config.get('model', self.default_model)
-            # Validate model is available
             if model not in self.available_models:
                 model = self.default_model
-            
+
             return model
         except Exception as e:
             print(f"Error getting current model: {str(e)}")

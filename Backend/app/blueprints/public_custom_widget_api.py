@@ -12,6 +12,7 @@ from tenant_context import (
     set_current_kb_id, clear_current_kb_id,
     set_current_tenant_id,
     set_widget_settings_override, clear_widget_settings_override,
+    set_model_override, clear_model_override,  # NEW
 )
 
 public_custom_widget_api_bp = Blueprint("public_custom_widget_api", __name__)
@@ -44,6 +45,12 @@ def _clamp_0_4(value):
         return None
     return max(0, min(4, v))
 
+# Map UI "mode" to model ids
+_MODE_TO_MODEL = {
+    "lite": "gpt-4o-mini",
+    "pro":  "gpt-4o",
+}
+
 @public_custom_widget_api_bp.route("/public/custom-widget/<widget_id>/chatbot", methods=["OPTIONS"])
 def public_custom_chatbot_options(widget_id):
     widget = resolve_widget(widget_id)
@@ -57,27 +64,38 @@ def public_custom_chatbot(widget_id):
     message = (payload.get("message") or "").strip()
     session_id = payload.get("session_id")
 
-    # persona sliders (optional, per-request)
+    # --- persona sliders (optional) ---
     tone   = _clamp_0_4(payload.get("tone"))
     humor  = _clamp_0_4(payload.get("humor"))
     brevity= _clamp_0_4(payload.get("brevity"))
 
+    # --- model switch (optional) ---
+    mode_raw  = (payload.get("mode") or "").strip().lower()   # "lite" | "pro"
+    model_raw = (payload.get("model") or "").strip()          # "gpt-4o-mini" | "gpt-4o"
+    chosen_model = None
+    if model_raw in _MODE_TO_MODEL.values():
+        chosen_model = model_raw
+    elif mode_raw in _MODE_TO_MODEL:
+        chosen_model = _MODE_TO_MODEL[mode_raw]
+
     widget = resolve_widget(widget_id)
     if not widget:
-        # Even for errors, return CORS headers so the browser can read it
         return _corsify({"success": False, "error": "Widget not found"}, widget=None, status=404)
 
-    # tenant context for this request
+    # tenant context
     set_current_tenant_id(widget["tenant_id"])
     set_user_data_dir(Path(widget["user_data_dir"]))
 
-    # apply per-request persona override if provided
+    # per-request overrides
     overrides = {}
     if tone   is not None: overrides["tone"] = tone
     if humor  is not None: overrides["humor"] = humor
     if brevity is not None: overrides["brevity"] = brevity
     if overrides:
         set_widget_settings_override(overrides)
+
+    if chosen_model:
+        set_model_override(chosen_model)  # << apply model override just for this request
 
     try:
         if not message:
@@ -147,10 +165,12 @@ def public_custom_chatbot(widget_id):
         return _corsify({
             "success": True,
             "response": response_text,
-            "session_id": chatbot_service.get_current_session_id()
+            "session_id": chatbot_service.get_current_session_id(),
+            "model": chosen_model or "default"  # optional debug info
         }, widget=widget)
 
     finally:
+        clear_model_override()              # << IMPORTANT: prevent leakage across requests
         clear_widget_settings_override()
         clear_user_data_dir()
         clear_current_kb_id()

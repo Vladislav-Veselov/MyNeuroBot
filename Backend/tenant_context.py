@@ -12,6 +12,9 @@ _current_widget_settings_override: ContextVar[Optional[Dict[str, int]]] = Contex
     "current_widget_settings_override", default=None
 )
 
+# NEW: per-request model override
+_current_model_override: ContextVar[Optional[str]] = ContextVar("current_model_override", default=None)
+
 def set_user_data_dir(path: Path):
     _current_user_data_dir.set(Path(path))
 
@@ -48,3 +51,13 @@ def get_widget_settings_override() -> Optional[Dict[str, int]]:
 
 def clear_widget_settings_override():
     _current_widget_settings_override.set(None)
+
+# NEW: per-request model override
+def set_model_override(model: Optional[str]):
+    _current_model_override.set(model)
+
+def get_model_override() -> Optional[str]:
+    return _current_model_override.get()
+
+def clear_model_override():
+    _current_model_override.set(None)
