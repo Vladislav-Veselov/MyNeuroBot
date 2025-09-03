@@ -34,6 +34,22 @@ document.addEventListener('DOMContentLoaded', function() {
         clearChat();
     });
 
+    // Elements
+    const configDarkToggle = document.getElementById('configDarkToggle');
+    const configTriangle   = document.getElementById('configTriangle');
+    const configPanelDark  = document.getElementById('configPanelDark');
+
+    // Toggle function
+    const toggleDarkPanel = () => {
+      const isOpen = configPanelDark.classList.toggle('is-open');
+      configTriangle.classList.toggle('is-active', isOpen);
+      configDarkToggle.setAttribute('aria-expanded', String(isOpen));
+      configDarkToggle.title = isOpen ? 'Скрыть панель параметров' : 'Показать панель параметров';
+    };
+
+    // Bind once to the button (covers mouse, keyboard, touch)
+    configDarkToggle.addEventListener('click', toggleDarkPanel);
+
     // Function to load current knowledge base name
     async function loadCurrentKnowledgeBase() {
         try {
