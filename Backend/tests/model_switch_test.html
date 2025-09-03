@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Switch Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 3px;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Model Switch Test</h1>
+    <p>Test the LITE/PRO model switching functionality</p>
+
+    <div class="test-section">
+        <h3>Test Configuration</h3>
+        <label>Message:</label>
+        <input type="text" id="messageInput" value="Hello, what model are you using?" />
+        <br>
+        <label>Mode:</label>
+        <select id="modeSelect">
+            <option value="">Default (no mode)</option>
+            <option value="lite">LITE</option>
+            <option value="pro">PRO</option>
+        </select>
+        <br>
+        <button onclick="testModelSwitch()">Test Model Switch</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Results</h3>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Quick Tests</h3>
+        <button onclick="quickTest('lite')">Test LITE Mode</button>
+        <button onclick="quickTest('pro')">Test PRO Mode</button>
+        <button onclick="quickTest('')">Test Default Mode</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5001';
+        const WIDGET_ID = 'creatium-alexey-widget';
+        const API_URL = `${API_BASE}/public/custom-widget/${WIDGET_ID}/chatbot`;
+
+        function addResult(message, isSuccess = true) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${isSuccess ? 'success' : 'error'}`;
+            resultDiv.innerHTML = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        async function sendMessage(message, mode = null) {
+            const payload = {
+                message: message,
+                tone: 2,
+                humor: 2,
+                brevity: 2
+            };
+
+            if (mode) {
+                payload.mode = mode;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                throw new Error(`Request failed: ${error.message}`);
+            }
+        }
+
+        async function testModelSwitch() {
+            const message = document.getElementById('messageInput').value;
+            const mode = document.getElementById('modeSelect').value;
+            
+            addResult(`🔄 Testing with mode: ${mode || 'default'}`);
+            
+            try {
+                const result = await sendMessage(message, mode);
+                
+                if (result.success) {
+                    addResult(`
+                        ✅ Success!<br>
+                        <strong>Model used:</strong> ${result.model}<br>
+                        <strong>Response:</strong> ${result.response.substring(0, 100)}...<br>
+                        <strong>Session ID:</strong> ${result.session_id}
+                    `);
+                } else {
+                    addResult(`❌ Error: ${result.error}`, false);
+                }
+            } catch (error) {
+                addResult(`❌ ${error.message}`, false);
+            }
+        }
+
+        async function quickTest(mode) {
+            const modeText = mode || 'default';
+            addResult(`🚀 Quick test: ${modeText} mode`);
+            
+            try {
+                const result = await sendMessage("Hello, what model are you using?", mode);
+                
+                if (result.success) {
+                    const expectedModel = mode === 'lite' ? 'gpt-4o-mini' : 
+                                        mode === 'pro' ? 'gpt-4o' : 'default';
+                    const isCorrect = result.model === expectedModel;
+                    
+                    addResult(`
+                        ${isCorrect ? '✅' : '❌'} ${modeText.toUpperCase()} Mode<br>
+                        <strong>Expected:</strong> ${expectedModel}<br>
+                        <strong>Actual:</strong> ${result.model}<br>
+                        <strong>Response:</strong> ${result.response.substring(0, 80)}...
+                    `, isCorrect);
+                } else {
+                    addResult(`❌ Error: ${result.error}`, false);
+                }
+            } catch (error) {
+                addResult(`❌ ${error.message}`, false);
+            }
+        }
+    </script>
+</body>
+</html>

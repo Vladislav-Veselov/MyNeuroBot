@@ -355,6 +355,10 @@ class ChatbotService:
             # Get the current model for the user
             current_model = model_manager.get_current_model()
             
+            # Log model selection for debugging
+            print(f"🤖 MODEL SELECTED: {current_model}")
+            print(f"📝 USER MESSAGE: {user_message}")
+            
             # Call OpenAI API
             response = client.chat.completions.create(
                 model=current_model,
