@@ -199,22 +199,22 @@
     box-shadow: 0 4px 12px rgba(220, 73, 24, 0.3);
 }
 
-/* Message styles in modal */
-.modal-message {
+/* Message styles in modal - More specific selectors to override chatbot.css */
+#dialogue-modal .modal-message {
     display: flex;
     gap: 12px;
     margin-bottom: 16px;
 }
 
-.modal-message.user {
+#dialogue-modal .modal-message.user {
     flex-direction: row-reverse;
 }
 
-.modal-message.assistant {
+#dialogue-modal .modal-message.assistant {
     flex-direction: row;
 }
 
-.message-avatar {
+#dialogue-modal .message-avatar {
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -226,49 +226,86 @@
     flex-shrink: 0;
 }
 
-.message-avatar.user {
+#dialogue-modal .message-avatar.user {
     background: linear-gradient(135deg, #DC4918, #FF6B35);
     color: white;
 }
 
-.message-avatar.assistant {
+#dialogue-modal .message-avatar.assistant {
     background: #DC4918;
     color: white;
 }
 
-.message-content {
+#dialogue-modal .message-content {
     max-width: 70%;
-    padding: 12px 16px;
+    padding: 6px 10px !important;
     border-radius: 12px;
     word-wrap: break-word;
     white-space: pre-wrap;
+    min-height: auto !important;
+    height: auto !important;
 }
 
-.message-content.user {
+/* Force override for message bubbles - highest specificity */
+#dialogue-modal .modal-message .message-content .message-bubble {
+    word-wrap: break-word !important;
+    white-space: pre-wrap !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+    display: block !important;
+    font-size: 14px !important;
+}
+
+#dialogue-modal .modal-message .message-content {
+    max-width: 70% !important;
+    padding: 4px 8px !important;
+    border-radius: 12px !important;
+    word-wrap: break-word !important;
+    white-space: pre-wrap !important;
+    min-height: auto !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+
+#dialogue-modal .modal-message {
+    display: flex !important;
+    gap: 12px !important;
+    margin-bottom: 12px !important;
+    align-items: flex-start !important;
+    min-height: auto !important;
+    height: auto !important;
+}
+
+#dialogue-modal .message-content.user {
     background: #DC4918;
     color: white;
     border-bottom-right-radius: 4px;
 }
 
-.message-content.assistant {
+#dialogue-modal .message-content.assistant {
     background: #2D3446;
     color: white;
     border: 1px solid #3D4456;
     border-bottom-left-radius: 4px;
 }
 
-.message-timestamp {
+#dialogue-modal .message-timestamp {
     font-size: 0.75rem;
     color: #718096;
     margin-top: 4px;
     text-align: right;
 }
 
-.message-timestamp.user {
+#dialogue-modal .message-timestamp.user {
     text-align: right;
 }
 
-.message-timestamp.assistant {
+#dialogue-modal .message-timestamp.assistant {
     text-align: left;
 }
 
@@ -557,6 +594,31 @@
     color: white;
     border-color: #DC4918;
     transform: translateY(-1px);
+}
+
+/* Download session button hover effects */
+.download-session-btn:hover {
+    background: #3D4456 !important;
+    border-color: #DC4918 !important;
+    color: white !important;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(220, 73, 24, 0.3);
+}
+
+.download-session-btn:active {
+    transform: scale(0.95);
+}
+
+/* Delete session button hover effects */
+.delete-session-btn:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.5) !important;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.delete-session-btn:active {
+    transform: scale(0.95);
 }
 
 .download-session-btn svg {

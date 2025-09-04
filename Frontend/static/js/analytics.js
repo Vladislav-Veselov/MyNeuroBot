@@ -79,6 +79,15 @@ class AnalyticsManager {
                 this.downloadSession(button.dataset.sessionId);
             }
         });
+
+        // Delete session button (delegated event)
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-session-btn') || e.target.closest('.delete-session-btn')) {
+                e.stopPropagation(); // Prevent session card click
+                const button = e.target.classList.contains('delete-session-btn') ? e.target : e.target.closest('.delete-session-btn');
+                this.deleteSession(button.dataset.sessionId);
+            }
+        });
     }
 
     async analyzeUnreadSessions() {
@@ -121,8 +130,7 @@ class AnalyticsManager {
             <div class="notification-content">
                 <h4>Анализ завершен</h4>
                 <p>Проанализировано сессий: ${stats.analyzed}</p>
-                <p>Потенциальных клиентов: ${stats.potential_clients}</p>
-                <p>Не клиентов: ${stats.not_potential}</p>
+                <p>Квалифицированно как лид: ${stats.potential_clients}</p>
                 <button onclick="this.parentElement.parentElement.remove()">✕</button>
             </div>
         `;
@@ -320,8 +328,12 @@ class AnalyticsManager {
         // Add click event listeners to session cards
         container.querySelectorAll('.session-card').forEach(card => {
             card.addEventListener('click', (e) => {
-                // Don't open session if clicking on the toggle button
-                if (!e.target.classList.contains('toggle-potential-client-btn')) {
+                // Don't open session if clicking on action buttons
+                if (!e.target.classList.contains('toggle-potential-client-btn') && 
+                    !e.target.classList.contains('download-session-btn') && 
+                    !e.target.classList.contains('delete-session-btn') &&
+                    !e.target.closest('.download-session-btn') &&
+                    !e.target.closest('.delete-session-btn')) {
                     this.openSession(card.dataset.sessionId);
                 }
             });
@@ -376,13 +388,17 @@ class AnalyticsManager {
                 </div>
                 <div class="session-actions">
                     <button class="toggle-potential-client-btn" data-session-id="${session.session_id}" data-current-status="${isPotentialClient}">
-                        ${isPotentialClient ? 'Убрать клиента' : 'Отметить клиентом'}
+                        ${isPotentialClient ? 'Не лид' : 'Лид!'}
                     </button>
-                    <button class="download-session-btn" data-session-id="${session.session_id}">
-                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button class="download-session-btn" data-session-id="${session.session_id}" style="width: 32px; height: 32px; border-radius: 50%; background: #2D3446; color: #A0AEC0; border: 1px solid #3D4456; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; margin-right: 8px;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
-                        Скачать
+                    </button>
+                    <button class="delete-session-btn" data-session-id="${session.session_id}" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -489,18 +505,31 @@ class AnalyticsManager {
     createMessageElement(message) {
         const timestamp = this.formatDate(message.timestamp);
         const isUser = message.role === 'user';
-        const avatarText = isUser ? 'U' : 'B';
+        const avatarText = 'B'; // Only bot gets avatar
         const avatarClass = isUser ? 'user' : 'assistant';
         
-        return `
-            <div class="modal-message ${avatarClass}">
-                <div class="message-avatar ${avatarClass}">${avatarText}</div>
-                <div class="message-content ${avatarClass}">
-                    <div class="message-bubble">${this.escapeHtml(message.content)}</div>
-                    <div class="message-timestamp ${avatarClass}">${timestamp}</div>
+        if (isUser) {
+            // User message - no avatar, gray bubble
+            return `
+                <div class="analytics-message ${avatarClass}" style="display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; min-height: auto; height: auto; justify-content: flex-end;">
+                    <div class="analytics-content ${avatarClass}" style="max-width: 70%; padding: 4px 8px; border-radius: 12px; word-wrap: break-word; white-space: pre-wrap; background: #6B7280; color: white; border: none; border-bottom-right-radius: 4px; min-height: auto; height: auto; display: flex; flex-direction: column; align-items: flex-end;">
+                        <div class="analytics-bubble" style="word-wrap: break-word; white-space: pre-wrap; line-height: 1.2; margin: 0; padding: 0; min-height: auto; height: auto; display: block; font-size: 14px;">${this.escapeHtml(message.content)}</div>
+                        <div class="analytics-timestamp ${avatarClass}" style="font-size: 0.75rem; color: rgba(209, 213, 219, 0.7); margin-top: 4px; text-align: right;">${timestamp}</div>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        } else {
+            // Bot message - with avatar, #3A7F87 bubble
+            return `
+                <div class="analytics-message ${avatarClass}" style="display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; min-height: auto; height: auto;">
+                    <div class="analytics-avatar ${avatarClass}" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.875rem; flex-shrink: 0; background: #3A7F87; color: white;">${avatarText}</div>
+                    <div class="analytics-content ${avatarClass}" style="max-width: 70%; padding: 4px 8px; border-radius: 12px; word-wrap: break-word; white-space: pre-wrap; background: #3A7F87; color: white; border: none; border-bottom-left-radius: 4px; min-height: auto; height: auto; display: flex; flex-direction: column; align-items: flex-start;">
+                        <div class="analytics-bubble" style="word-wrap: break-word; white-space: pre-wrap; line-height: 1.2; margin: 0; padding: 0; min-height: auto; height: auto; display: block; font-size: 14px;">${this.escapeHtml(message.content)}</div>
+                        <div class="analytics-timestamp ${avatarClass}" style="font-size: 0.75rem; color: rgba(209, 213, 219, 0.7); margin-top: 4px; text-align: left;">${timestamp}</div>
+                    </div>
+                </div>
+            `;
+        }
     }
 
     openModal() {
@@ -535,6 +564,31 @@ class AnalyticsManager {
             
             if (data.success) {
                 this.closeModal();
+                this.loadStatistics();
+                this.loadSessions();
+                this.filterSessions();
+            } else {
+                console.error('Failed to delete session:', data.error);
+                alert('Ошибка удаления сессии');
+            }
+        } catch (error) {
+            console.error('Error deleting session:', error);
+            alert('Ошибка удаления сессии');
+        }
+    }
+
+    async deleteSession(sessionId) {
+        if (!sessionId) return;
+        
+        if (!confirm('Вы уверены, что хотите удалить эту сессию?')) return;
+        
+        try {
+            const response = await fetch(`/api/dialogues/${sessionId}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
                 this.loadStatistics();
                 this.loadSessions();
                 this.filterSessions();

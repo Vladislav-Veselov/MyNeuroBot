@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sender === 'user') {
             messageDiv.innerHTML = `
                 <div class="user-message rounded-lg p-3 max-w-xs lg:max-w-md">
-                    <p class="text-white">${escapeHtml(text)}</p>
+                    <p class="text-white">${formatMessageText(escapeHtml(text))}</p>
                     <span class="text-xs text-white opacity-70 mt-1 block">${timestamp}</span>
                 </div>
                 <div class="w-8 h-8 bg-[#DC4918] rounded-full flex items-center justify-center flex-shrink-0">
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </svg>
                 </div>
                 <div class="bot-message rounded-lg p-3 max-w-xs lg:max-w-md">
-                    <p class="text-white">${escapeHtml(text)}</p>
+                    <p class="text-white">${formatMessageText(escapeHtml(text))}</p>
                     <span class="text-xs text-[#718096] mt-1 block">${timestamp}</span>
                 </div>
             `;
@@ -293,6 +293,14 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error clearing chat history:', error);
         });
+    }
+
+    function formatMessageText(text) {
+        // Convert **text** to <strong>text</strong> for bold formatting
+        // Convert \n to <br> for line breaks
+        return text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
     }
 
     function escapeHtml(text) {
