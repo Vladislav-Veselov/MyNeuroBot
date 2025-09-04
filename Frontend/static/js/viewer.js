@@ -37,11 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelDeleteBtn = document.getElementById('cancel-delete');
     const confirmDeleteBtn = document.getElementById('confirm-delete');
     
-    // Help modal elements
-    const helpBtn = document.getElementById('help-btn');
-    const helpModal = document.getElementById('help-modal');
-    const closeHelpModalBtn = document.getElementById('close-help-modal');
-    
     // Download button element
     const downloadKbBtn = document.getElementById('download-kb-btn');
     
@@ -157,11 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ? answer.split('\n')[0].substring(0, 200) + '...' 
             : answer;
 
-        // Add similarity score for semantic search results
-        const similarityScore = doc.similarity_score 
-            ? `<div class="text-sm text-[#718096] mt-2">Релевантность: ${(doc.similarity_score * 100).toFixed(1)}%</div>`
-            : '';
-
         return `
             <div class="document-card bg-[#242A36] border border-[#2D3446] rounded-lg p-4 hover:shadow-md transition-shadow" data-id="${doc.id}" data-question="${encodeURIComponent(question)}" data-answer="${encodeURIComponent(answer)}">
                 <div class="space-y-2">
@@ -181,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="answer text-[#A0AEC0] whitespace-pre-line">
                         ${highlightText(previewAnswer, currentSearch || currentSemanticSearch)}
                     </div>
-                    ${similarityScore}
                 </div>
             </div>
         `;
@@ -214,8 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="stat-label text-[#A0AEC0]">Всего вопросов</div>
             </div>
             <div class="stat-card bg-[#242A36] p-4 rounded-lg border border-[#2D3446]">
-                <div class="stat-value text-2xl font-bold text-[#DC4918]">${Math.round(stats.average_question_length)}</div>
-                <div class="stat-label text-[#A0AEC0]">Средняя длина вопроса</div>
+                <div class="stat-value text-2xl font-bold text-[#DC4918]">${stats.last_update}</div>
+                <div class="stat-label text-[#A0AEC0]">Последнее обновление базы</div>
             </div>
             <div class="stat-card bg-[#242A36] p-4 rounded-lg border border-[#2D3446]">
                 <div class="stat-value text-2xl font-bold text-[#DC4918]">${Math.round(stats.average_answer_length)}</div>
@@ -611,37 +600,8 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelDeleteBtn.addEventListener('click', closeDeleteModal);
     confirmDeleteBtn.addEventListener('click', handleDelete);
 
-    // Help modal functions
-    function openHelpModal() {
-        helpModal.classList.remove('hidden');
-        helpModal.classList.add('flex');
-    }
-
-    function closeHelpModal() {
-        helpModal.classList.remove('flex');
-        helpModal.classList.add('hidden');
-    }
-
-    // Event listeners for help modal
-    helpBtn.addEventListener('click', openHelpModal);
-    closeHelpModalBtn.addEventListener('click', closeHelpModal);
-
     // Download button event listener
     downloadKbBtn.addEventListener('click', handleDownloadKnowledgeFile);
-
-    // Close help modal when clicking outside
-    helpModal.addEventListener('click', (e) => {
-        if (e.target === helpModal) {
-            closeHelpModal();
-        }
-    });
-
-    // Close help modal with Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && helpModal.classList.contains('flex')) {
-            closeHelpModal();
-        }
-    });
 
     // Download knowledge file function
     async function handleDownloadKnowledgeFile() {

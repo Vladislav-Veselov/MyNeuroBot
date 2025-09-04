@@ -89,12 +89,38 @@ def read_knowledge_file(kb_id: str = None) -> list[dict]:
         return []
 
 def write_knowledge_file(documents: list[dict], kb_id: str | None = None) -> None:
-    """Write Q&A list to JSON file."""
+    """Write Q&A list to JSON file and update the last modified timestamp."""
     path = get_knowledge_file_path(kb_id)
     # keep only the fields we need to persist
     payload = [{"question": d["question"], "answer": d["answer"]} for d in documents]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    
+    # Update the updated_at timestamp in kb_info.json
+    kb_info_file = path.parent / "kb_info.json"
+    if kb_info_file.exists():
+        try:
+            with open(kb_info_file, 'r', encoding='utf-8') as f:
+                kb_info = json.load(f)
+        except:
+            kb_info = {}
+    else:
+        kb_info = {}
+    
+    # Update timestamp and document count
+    kb_info['updated_at'] = datetime.now().isoformat()
+    kb_info['document_count'] = len(documents)
+    
+    # Preserve other fields if they exist
+    if 'name' not in kb_info:
+        kb_info['name'] = kb_id or get_current_kb_id()
+    if 'created_at' not in kb_info:
+        kb_info['created_at'] = datetime.now().isoformat()
+    if 'analyze_clients' not in kb_info:
+        kb_info['analyze_clients'] = True
+    
+    with open(kb_info_file, 'w', encoding='utf-8') as f:
+        json.dump(kb_info, f, ensure_ascii=False, indent=2)
 
 def get_all_documents() -> list:
     """Get all Q&A pairs from the knowledge file."""
@@ -465,9 +491,28 @@ def get_stats():
         total_q_len = sum(len(doc['question']) for doc in docs)
         total_a_len = sum(len(doc['answer']) for doc in docs)
         
+        # Get last update timestamp from current KB info
+        current_kb_id = get_current_kb_id()
+        user_data_dir = get_current_user_data_dir()
+        kb_dir = user_data_dir / "knowledge_bases" / current_kb_id
+        kb_info_file = kb_dir / "kb_info.json"
+        
+        last_update = "Неизвестно"
+        if kb_info_file.exists():
+            with open(kb_info_file, 'r', encoding='utf-8') as f:
+                kb_info = json.load(f)
+                updated_at = kb_info.get('updated_at', '')
+                if updated_at:
+                    try:
+                        # Parse ISO format and format for display
+                        dt = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+                        last_update = dt.strftime('%d.%m.%Y %H:%M')
+                    except:
+                        last_update = "Неизвестно"
+        
         stats = {
             'total_documents': total_docs,
-            'average_question_length': total_q_len / total_docs if total_docs > 0 else 0,
+            'last_update': last_update,
             'average_answer_length': total_a_len / total_docs if total_docs > 0 else 0
         }
         

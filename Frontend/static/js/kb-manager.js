@@ -283,7 +283,7 @@ class KnowledgeBaseManager {
         
         input.value = '';
         passwordInput.value = '';
-        this.setAnalyzeClientsToggle('true'); // Default to Yes
+        this.setAnalyzeClientsToggle('false'); // Default to No
         error.textContent = '';
         modal.classList.remove('hidden');
         modal.classList.add('flex');
