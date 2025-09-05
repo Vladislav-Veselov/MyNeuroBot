@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from auth import get_current_user_data_dir, auth
 from model_manager import model_manager
 from pricing_service import pricing_service
@@ -64,7 +64,7 @@ class BalanceManager:
             "total_cost_usd": 0.0,
             "total_cost_rub": 0.0,
             "current_model": model_manager.get_current_model(),
-            "last_updated": datetime.now().isoformat()
+            "last_updated": datetime.now(timezone(timedelta(hours=3))).isoformat()
         }
     
     def save_balance(self, balance_data: Dict[str, Any], username: str = None) -> bool:
@@ -130,7 +130,7 @@ class BalanceManager:
             balance_data['total_output_tokens'] += output_tokens
             balance_data['total_cost_usd'] += cost_usd
             balance_data['total_cost_rub'] += cost_rub
-            balance_data['last_updated'] = datetime.now().isoformat()
+            balance_data['last_updated'] = datetime.now(timezone(timedelta(hours=3))).isoformat()
             
             # Save updated balance
             if not self.save_balance(balance_data):
@@ -162,7 +162,7 @@ class BalanceManager:
             
             # Add new transaction
             transaction = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone(timedelta(hours=3))).isoformat(),
                 "activity_type": activity_type,
                 "model": model,
                 "input_tokens": input_tokens,
@@ -231,7 +231,7 @@ class BalanceManager:
             # Increase balance
             old_balance = balance_data['balance_rub']
             balance_data['balance_rub'] += amount_rub
-            balance_data['last_updated'] = datetime.now().isoformat()
+            balance_data['last_updated'] = datetime.now(timezone(timedelta(hours=3))).isoformat()
             
             # Save updated balance
             if not self.save_balance(balance_data, username):

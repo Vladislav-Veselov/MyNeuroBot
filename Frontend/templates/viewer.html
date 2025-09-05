@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Просмотр базы знаний</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='avatar.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.css') }}">
 </head>
@@ -218,13 +219,19 @@
                         <label for="add-question" class="block text-sm font-medium text-[#A0AEC0] mb-1">Вопрос</label>
                         <textarea id="add-question" name="question" rows="3" 
                                 class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
-                                placeholder="Введите вопрос..."></textarea>
+                                placeholder="Введите вопрос..." maxlength="250"></textarea>
+                        <div class="text-xs text-[#718096] mt-1 text-right">
+                            <span id="add-question-counter">0</span>/250 символов
+                        </div>
                     </div>
                     <div>
                         <label for="add-answer" class="block text-sm font-medium text-[#A0AEC0] mb-1">Ответ</label>
                         <textarea id="add-answer" name="answer" rows="6" 
                                 class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
-                                placeholder="Введите ответ..."></textarea>
+                                placeholder="Введите ответ..." maxlength="2500"></textarea>
+                        <div class="text-xs text-[#718096] mt-1 text-right">
+                            <span id="add-answer-counter">0</span>/2500 символов
+                        </div>
                     </div>
                     <div id="add-qa-error" class="text-[#DC4918] text-sm"></div>
                     <div class="flex justify-end space-x-3">
@@ -254,13 +261,19 @@
                         <label for="edit-question" class="block text-sm font-medium text-[#A0AEC0] mb-1">Вопрос</label>
                         <textarea id="edit-question" name="question" rows="3" 
                                 class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
-                                placeholder="Введите вопрос..."></textarea>
+                                placeholder="Введите вопрос..." maxlength="250"></textarea>
+                        <div class="text-xs text-[#718096] mt-1 text-right">
+                            <span id="edit-question-counter">0</span>/250 символов
+                        </div>
                     </div>
                     <div>
                         <label for="edit-answer" class="block text-sm font-medium text-[#A0AEC0] mb-1">Ответ</label>
                         <textarea id="edit-answer" name="answer" rows="6" 
                                 class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
-                                placeholder="Введите ответ..."></textarea>
+                                placeholder="Введите ответ..." maxlength="2500"></textarea>
+                        <div class="text-xs text-[#718096] mt-1 text-right">
+                            <span id="edit-answer-counter">0</span>/2500 символов
+                        </div>
                     </div>
                     <div id="edit-qa-error" class="text-[#DC4918] text-sm"></div>
                     <div class="flex justify-end space-x-3">
@@ -462,6 +475,35 @@
                     <div class="flex justify-end space-x-3">
                         <button type="button" id="cancel-change-analyze-clients" class="btn-outline">Отмена</button>
                         <button type="submit" class="btn-primary">Изменить настройку</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- KB Password Prompt Modal -->
+    <div id="kb-password-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-md w-full mx-4" style="background-color: #242A36 !important;">
+            <div class="p-6" style="background-color: #242A36 !important;">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-white">Введите пароль базы знаний</h3>
+                    <button id="close-kb-password-modal" class="text-[#718096] hover:text-white">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <form id="kb-password-form" class="space-y-4" style="background-color: #242A36 !important;">
+                    <div>
+                        <label for="kb-password-input" class="block text-sm font-medium text-[#A0AEC0] mb-1">Пароль для базы знаний "<span id="kb-password-name"></span>"</label>
+                        <input type="password" id="kb-password-input" name="password" 
+                               class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
+                               placeholder="Введите пароль...">
+                    </div>
+                    <div id="kb-password-error" class="text-[#DC4918] text-sm"></div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" id="cancel-kb-password" class="btn-outline">Отмена</button>
+                        <button type="submit" class="btn-primary">Переключиться</button>
                     </div>
                 </form>
             </div>

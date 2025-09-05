@@ -384,6 +384,9 @@ document.addEventListener('DOMContentLoaded', () => {
         addQuestionInput.value = '';
         addAnswerInput.value = '';
         addQaError.textContent = '';
+        // Reset character counters
+        document.getElementById('add-question-counter').textContent = '0';
+        document.getElementById('add-answer-counter').textContent = '0';
         addQaModal.classList.remove('hidden');
         addQaModal.classList.add('flex');
     }
@@ -401,15 +404,30 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const question = addQuestionInput.value.trim();
         const answer = addAnswerInput.value.trim();
+        
+        // Clear previous errors
+        addQaError.textContent = '';
+        
+        // Validate question length (max 250 characters)
         if (!question) {
             addQaError.textContent = 'Пожалуйста, введите вопрос.';
             return;
         }
+        if (question.length > 250) {
+            addQaError.textContent = 'Вопрос слишком длинный. Максимальная длина вопроса - 250 символов.';
+            return;
+        }
+        
+        // Validate answer length (max 2500 characters)
         if (!answer) {
             addQaError.textContent = 'Пожалуйста, введите ответ.';
             return;
         }
-        addQaError.textContent = '';
+        if (answer.length > 2500) {
+            addQaError.textContent = 'Ответ слишком длинный. Максимальная длина ответа - 2500 символов.';
+            return;
+        }
+        
         try {
             const response = await fetch('/api/add_qa', {
                 method: 'POST',
@@ -435,6 +453,9 @@ document.addEventListener('DOMContentLoaded', () => {
         editQuestionInput.value = question;
         editAnswerInput.value = answer;
         editQaError.textContent = '';
+        // Update character counters
+        document.getElementById('edit-question-counter').textContent = question.length;
+        document.getElementById('edit-answer-counter').textContent = answer.length;
         editQaModal.classList.remove('hidden');
         editQaModal.classList.add('flex');
     }
@@ -466,16 +487,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const question = editQuestionInput.value.trim();
         const answer = editAnswerInput.value.trim();
 
+        // Clear previous errors
+        editQaError.textContent = '';
+
+        // Validate question length (max 250 characters)
         if (!question) {
             editQaError.textContent = 'Пожалуйста, введите вопрос.';
             return;
         }
+        if (question.length > 250) {
+            editQaError.textContent = 'Вопрос слишком длинный. Максимальная длина вопроса - 250 символов.';
+            return;
+        }
+
+        // Validate answer length (max 2500 characters)
         if (!answer) {
             editQaError.textContent = 'Пожалуйста, введите ответ.';
             return;
         }
+        if (answer.length > 2500) {
+            editQaError.textContent = 'Ответ слишком длинный. Максимальная длина ответа - 2500 символов.';
+            return;
+        }
 
-        editQaError.textContent = '';
         try {
             const response = await fetch(`/api/document/${docId}`, {
                 method: 'PUT',
@@ -595,6 +629,23 @@ document.addEventListener('DOMContentLoaded', () => {
     editQaForm.addEventListener('submit', handleEdit);
     closeEditQaModalBtn.addEventListener('click', closeEditModal);
     cancelEditQaBtn.addEventListener('click', closeEditModal);
+    
+    // Character counter event listeners
+    addQuestionInput.addEventListener('input', function() {
+        document.getElementById('add-question-counter').textContent = this.value.length;
+    });
+    
+    addAnswerInput.addEventListener('input', function() {
+        document.getElementById('add-answer-counter').textContent = this.value.length;
+    });
+    
+    editQuestionInput.addEventListener('input', function() {
+        document.getElementById('edit-question-counter').textContent = this.value.length;
+    });
+    
+    editAnswerInput.addEventListener('input', function() {
+        document.getElementById('edit-answer-counter').textContent = this.value.length;
+    });
     
     closeDeleteModalBtn.addEventListener('click', closeDeleteModal);
     cancelDeleteBtn.addEventListener('click', closeDeleteModal);

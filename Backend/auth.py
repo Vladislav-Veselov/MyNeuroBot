@@ -10,7 +10,7 @@ import hashlib
 import secrets
 from pathlib import Path
 from typing import Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import request, jsonify, session, redirect, url_for
 
@@ -101,8 +101,8 @@ class UserAuth:
         # Create KB info
         kb_info = {
             'name': 'База знаний по умолчанию',
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat(),
+            'created_at': datetime.now(timezone(timedelta(hours=3))).isoformat(),
+            'updated_at': datetime.now(timezone(timedelta(hours=3))).isoformat(),
             'document_count': 0,
             'analyze_clients': True  # Default to True for potential client analysis
         }
@@ -125,8 +125,8 @@ class UserAuth:
         default_files = {
             "dialogues.json": json.dumps({
                 "metadata": {
-                    "created_at": datetime.now().isoformat(),
-                    "last_updated": datetime.now().isoformat(),
+                    "created_at": datetime.now(timezone(timedelta(hours=3))).isoformat(),
+                    "last_updated": datetime.now(timezone(timedelta(hours=3))).isoformat(),
                     "total_sessions": 0
                 },
                 "sessions": {}
@@ -150,7 +150,7 @@ class UserAuth:
         self.users[username] = {
             "password_hash": self._hash_password(password),
             "email": email,
-            "created_at": datetime.now().isoformat(),
+            "created_at": datetime.now(timezone(timedelta(hours=3))).isoformat(),
             "last_login": None,
             "data_directory": str(user_data_dir)
         }
@@ -194,7 +194,7 @@ class UserAuth:
             return {"success": False, "error": "Invalid username or password"}
         
         # Update last login
-        user["last_login"] = datetime.now().isoformat()
+        user["last_login"] = datetime.now(timezone(timedelta(hours=3))).isoformat()
         self._save_users()
         
         # Generate session token

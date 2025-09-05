@@ -136,7 +136,8 @@ function updateTransactionsList(transactions) {
             month: '2-digit',
             year: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            timeZone: 'Europe/Moscow'
         });
         
         const activityType = getActivityTypeDisplay(transaction.activity_type);

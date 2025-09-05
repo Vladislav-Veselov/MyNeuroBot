@@ -18,3 +18,5 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true
+      - key: TZ
+        value: Europe/Moscow

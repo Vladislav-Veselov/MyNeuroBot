@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function initAdminPanel() {
     loadUserBalances();
     loadUsers();
+    loadBotStatus();
 }
 
 function initLogout() {
@@ -69,6 +70,8 @@ function initLogout() {
     }
 }
 
+let botStatus = {}; // Global variable to store bot status
+
 function loadUserBalances() {
     fetch('/api/admin/balances')
     .then(response => response.json())
@@ -83,6 +86,23 @@ function loadUserBalances() {
     .catch(error => {
         console.error('Error:', error);
         showError('Ошибка загрузки балансов');
+    });
+}
+
+function loadBotStatus() {
+    fetch('/api/admin/bot-status')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            botStatus = data.bot_status;
+            // Reload balances display to update buttons
+            loadUserBalances();
+        } else {
+            console.error('Error loading bot status:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading bot status:', error);
     });
 }
 
@@ -107,6 +127,26 @@ function updateUserBalancesDisplay(balances) {
         if (balanceRub < 0) balanceColor = 'text-red-400';
         else if (balanceRub === 0) balanceColor = 'text-yellow-400';
         
+        // Get bot status for this user
+        const userBotStatus = botStatus[username] || { stopped: false };
+        const isBotStopped = userBotStatus.stopped;
+        
+        // Determine which button to show
+        let buttonHtml = '';
+        if (isBotStopped) {
+            buttonHtml = `
+                <button onclick="startUserBots('${username}')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors duration-200">
+                    Запустить боты
+                </button>
+            `;
+        } else {
+            buttonHtml = `
+                <button onclick="stopUserBots('${username}')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors duration-200">
+                    Остановить боты
+                </button>
+            `;
+        }
+        
         return `
             <div class="bg-[#242A36] rounded-lg p-4 border-l-4 border-[#DC4918]">
                 <div class="flex justify-between items-start mb-2">
@@ -119,9 +159,14 @@ function updateUserBalancesDisplay(balances) {
                         <p class="text-xs text-[#718096]">Общие расходы: ₽${totalCostRub.toFixed(2)}</p>
                     </div>
                 </div>
-                <div class="flex justify-between text-xs text-[#718096]">
-                    <span>Токенов: ${totalTokens.toLocaleString()}</span>
-                    <span>Обновлено: ${formatDate(balance.last_updated)}</span>
+                <div class="flex justify-between items-center text-xs text-[#718096]">
+                    <div>
+                        <span>Токенов: ${totalTokens.toLocaleString()}</span>
+                        <span class="ml-4">Обновлено: ${formatDate(balance.last_updated)}</span>
+                    </div>
+                    <div>
+                        ${buttonHtml}
+                    </div>
                 </div>
             </div>
         `;
@@ -241,9 +286,73 @@ function formatDate(dateString) {
             month: '2-digit',
             year: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            timeZone: 'Europe/Moscow'
         });
     } catch (e) {
         return 'Неизвестно';
     }
+}
+
+function stopUserBots(username) {
+    if (!confirm(`Вы уверены, что хотите остановить все боты для пользователя "${username}"?\n\nПользователь не сможет запустить боты самостоятельно до тех пор, пока вы их не разблокируете.`)) {
+        return;
+    }
+
+    const message = prompt('Введите сообщение для пользователя (необязательно):', 'Все ваши боты приостановлены админом');
+    
+    fetch('/api/admin/stop-user-bots', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            username: username,
+            message: message || 'Все ваши боты приостановлены админом'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showFormMessage('success', `Все боты пользователя ${username} успешно остановлены`);
+            // Reload bot status and balances to update the display
+            loadBotStatus();
+        } else {
+            showFormMessage('error', data.error || 'Ошибка при остановке ботов пользователя');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showFormMessage('error', 'Произошла ошибка. Попробуйте еще раз.');
+    });
+}
+
+function startUserBots(username) {
+    if (!confirm(`Вы уверены, что хотите запустить все боты для пользователя "${username}"?\n\nПользователь снова сможет управлять своими ботами.`)) {
+        return;
+    }
+
+    fetch('/api/admin/start-user-bots', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            username: username
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showFormMessage('success', `Все боты пользователя ${username} успешно запущены`);
+            // Reload bot status and balances to update the display
+            loadBotStatus();
+        } else {
+            showFormMessage('error', data.error || 'Ошибка при запуске ботов пользователя');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showFormMessage('error', 'Произошла ошибка. Попробуйте еще раз.');
+    });
 } 

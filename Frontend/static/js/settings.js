@@ -29,6 +29,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set initial state
         kbSelector.innerHTML = '<option value="">Загрузка...</option>';
         
+        // Automatically switch to default KB when opening Settings page
+        switchToDefaultKB();
+        
         loadKnowledgeBases();
         loadChatbotStatus();
         loadModelConfig();
@@ -88,9 +91,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 knowledgeBases = data.knowledge_bases || []; // Ensure it's an array
                 updateKbSelector();
                 
-                // Load settings for the first KB or current KB
-                if (knowledgeBases.length > 0) {
+                // Set currentKbId to the actual current KB from backend, not the first one
+                if (data.current_kb_id) {
+                    currentKbId = data.current_kb_id;
+                } else if (knowledgeBases.length > 0) {
                     currentKbId = knowledgeBases[0].id;
+                }
+                
+                // Load settings for the current KB
+                if (currentKbId) {
                     loadSettingsForKb(currentKbId);
                 } else {
                     // No KBs available
@@ -128,7 +137,8 @@ document.addEventListener('DOMContentLoaded', function() {
             option.textContent = kb.name;
             option.style.backgroundColor = '#242A36';
             option.style.color = 'white';
-            if (kb.id === currentKbId) {
+            // Always select the default KB since we switch to it on page load
+            if (kb.id === 'default') {
                 option.selected = true;
             }
             kbSelector.appendChild(option);
@@ -137,11 +147,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setupEventListeners() {
         // KB Selector change
-        kbSelector.addEventListener('change', (e) => {
+        kbSelector.addEventListener('change', async (e) => {
             const selectedKbId = e.target.value;
             if (selectedKbId && selectedKbId !== currentKbId) {
-                currentKbId = selectedKbId;
-                loadSettingsForKb(currentKbId);
+                await switchToKb(selectedKbId);
             }
         });
 
@@ -205,13 +214,21 @@ document.addEventListener('DOMContentLoaded', function() {
             chatbotStatus.textContent = 'Остановлен';
             chatbotStatus.className = 'text-red-400 font-medium';
             stopChatbotBtn.classList.add('hidden');
-            startChatbotBtn.classList.remove('hidden');
+            
+            // Check if stopped by admin
+            if (status.stopped_by === 'admin') {
+                startChatbotBtn.classList.add('hidden');
+                chatbotStatus.textContent = 'Остановлен админом';
+                chatbotStatus.className = 'text-red-500 font-medium';
+            } else {
+                startChatbotBtn.classList.remove('hidden');
+            }
             
             // Show stop details
             chatbotStatusDetails.classList.remove('hidden');
             if (status.stopped_at) {
                 const stopDate = new Date(status.stopped_at);
-                chatbotStopTime.textContent = `Остановлен: ${stopDate.toLocaleString('ru-RU')}`;
+                chatbotStopTime.textContent = `Остановлен: ${stopDate.toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}`;
             }
             if (status.message) {
                 chatbotStopMessage.textContent = `Сообщение: ${status.message}`;
@@ -269,7 +286,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage('Чатботы успешно запущены', 'success');
                 loadChatbotStatus(); // Reload status
             } else {
-                showMessage(data.error || 'Ошибка при запуске чатботов', 'error');
+                // Check if bots were stopped by admin
+                if (data.admin_stopped) {
+                    showMessage('Все ваши боты приостановлены админом', 'error');
+                } else {
+                    showMessage(data.error || 'Ошибка при запуске чатботов', 'error');
+                }
             }
         })
         .catch(error => {
@@ -352,6 +374,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function deleteCurrentKb() {
         if (!currentKbId) {
             showMessage('Сначала выберите базу знаний.', 'error');
+            return;
+        }
+
+        // Check if trying to delete the default KB
+        if (currentKbId === 'default') {
+            showMessage('Базу знаний по умолчанию нельзя удалить', 'error');
             return;
         }
 
@@ -460,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 document.getElementById('settings-kb-details-name').textContent = data.name;
                 document.getElementById('settings-kb-details-id').textContent = data.kb_id;
-                document.getElementById('settings-kb-details-created').textContent = new Date(data.created_at).toLocaleString('ru-RU');
+                document.getElementById('settings-kb-details-created').textContent = new Date(data.created_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
                 document.getElementById('settings-kb-details-docs').textContent = data.document_count;
                 
                 // Display the actual password
@@ -496,9 +524,288 @@ document.addEventListener('DOMContentLoaded', function() {
         messageDiv.className = `mt-4 p-4 rounded-lg ${type === 'success' ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'}`;
         messageDiv.classList.remove('hidden');
         
+        // Always scroll to the message element, regardless of modal state
+        setTimeout(() => {
+            messageDiv.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'nearest'
+            });
+        }, 100); // Small delay to ensure the message is rendered
+        
         // Hide message after 5 seconds
         setTimeout(() => {
             messageDiv.classList.add('hidden');
         }, 5000);
     }
+
+    // Resizable textarea functionality
+    function initResizableTextarea() {
+        const textarea = document.getElementById('additional-prompt');
+        const handle = document.querySelector('.resize-handle');
+        
+        if (!textarea || !handle) return;
+
+        let isResizing = false;
+        let startY = 0;
+        let startHeight = 0;
+
+        // Mouse events for the handle
+        handle.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            startY = e.clientY;
+            startHeight = textarea.offsetHeight;
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            
+            e.preventDefault();
+        });
+
+        function onMouseMove(e) {
+            if (!isResizing) return;
+            
+            const deltaY = e.clientY - startY;
+            const newHeight = Math.max(100, Math.min(600, startHeight + deltaY)); // Min 100px, Max 600px
+            
+            textarea.style.height = newHeight + 'px';
+        }
+
+        function onMouseUp() {
+            isResizing = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        // Touch events for mobile devices
+        handle.addEventListener('touchstart', function(e) {
+            isResizing = true;
+            startY = e.touches[0].clientY;
+            startHeight = textarea.offsetHeight;
+            
+            document.addEventListener('touchmove', onTouchMove);
+            document.addEventListener('touchend', onTouchEnd);
+            
+            e.preventDefault();
+        });
+
+        function onTouchMove(e) {
+            if (!isResizing) return;
+            
+            const deltaY = e.touches[0].clientY - startY;
+            const newHeight = Math.max(100, Math.min(600, startHeight + deltaY));
+            
+            textarea.style.height = newHeight + 'px';
+        }
+
+        function onTouchEnd() {
+            isResizing = false;
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('touchend', onTouchEnd);
+        }
+
+        // Auto-resize on input (optional enhancement)
+        textarea.addEventListener('input', function() {
+            if (!isResizing) {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 600) + 'px';
+            }
+        });
+    }
+
+    // Function to automatically switch to default KB
+    async function switchToDefaultKB() {
+        try {
+            const response = await fetch('/api/knowledge-bases/default', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('Successfully switched to default KB');
+            } else {
+                console.error('Failed to switch to default KB:', data.error);
+            }
+        } catch (error) {
+            console.error('Error switching to default KB:', error);
+        }
+    }
+
+    // Function to switch to a KB with password protection
+    async function switchToKb(kbId) {
+        try {
+            // Check if KB requires password (not default KB)
+            if (kbId !== 'default') {
+                // Get KB details to check if it has a password
+                const kbDetailsResponse = await fetch(`/api/knowledge-bases/${kbId}`);
+                const kbDetails = await kbDetailsResponse.json();
+                
+                if (kbDetails.success && kbDetails.has_password) {
+                    // Show password prompt
+                    const password = await showPasswordPrompt(kbDetails.name);
+                    if (password === null) {
+                        // User cancelled, revert selector
+                        kbSelector.value = currentKbId;
+                        return;
+                    }
+                    
+                    // Try to switch with password
+                    const response = await fetch(`/api/knowledge-bases/${kbId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ password: password })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        currentKbId = kbId;
+                        loadSettingsForKb(currentKbId);
+                        showMessage(`Переключено на базу знаний "${kbDetails.name}"`, 'success');
+                    } else {
+                        console.error('Failed to switch knowledge base:', data.error);
+                        showMessage(data.error || 'Ошибка при переключении базы знаний.', 'error');
+                        // Revert selector
+                        kbSelector.value = currentKbId;
+                    }
+                } else {
+                    // KB doesn't have password, switch directly
+                    const response = await fetch(`/api/knowledge-bases/${kbId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        currentKbId = kbId;
+                        loadSettingsForKb(currentKbId);
+                        showMessage(`Переключено на базу знаний "${kbDetails.name}"`, 'success');
+                    } else {
+                        console.error('Failed to switch knowledge base:', data.error);
+                        showMessage('Ошибка при переключении базы знаний.', 'error');
+                        // Revert selector
+                        kbSelector.value = currentKbId;
+                    }
+                }
+            } else {
+                // Default KB, switch directly
+                const response = await fetch(`/api/knowledge-bases/${kbId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentKbId = kbId;
+                    loadSettingsForKb(currentKbId);
+                    showMessage('Переключено на базу знаний по умолчанию', 'success');
+                } else {
+                    console.error('Failed to switch knowledge base:', data.error);
+                    showMessage('Ошибка при переключении базы знаний.', 'error');
+                    // Revert selector
+                    kbSelector.value = currentKbId;
+                }
+            }
+        } catch (error) {
+            console.error('Error switching knowledge base:', error);
+            showMessage('Ошибка при переключении базы знаний.', 'error');
+            // Revert selector
+            kbSelector.value = currentKbId;
+        }
+    }
+
+    // Function to show password prompt modal
+    function showPasswordPrompt(kbName) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('settings-kb-password-modal');
+            const passwordInput = document.getElementById('settings-kb-password-input');
+            const passwordName = document.getElementById('settings-kb-password-name');
+            const errorDiv = document.getElementById('settings-kb-password-error');
+            const form = document.getElementById('settings-kb-password-form');
+            const closeBtn = document.getElementById('close-settings-kb-password-modal');
+            const cancelBtn = document.getElementById('cancel-settings-kb-password');
+
+            // Set KB name
+            passwordName.textContent = kbName;
+            
+            // Clear previous values
+            passwordInput.value = '';
+            errorDiv.textContent = '';
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Focus on password input
+            setTimeout(() => passwordInput.focus(), 100);
+
+            // Handle form submission
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const password = passwordInput.value.trim();
+                
+                if (!password) {
+                    errorDiv.textContent = 'Пожалуйста, введите пароль';
+                    return;
+                }
+                
+                // Clean up event listeners
+                form.removeEventListener('submit', handleSubmit);
+                closeBtn.removeEventListener('click', handleCancel);
+                cancelBtn.removeEventListener('click', handleCancel);
+                modal.removeEventListener('click', handleModalClick);
+                
+                // Hide modal
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                
+                // Resolve with password
+                resolve(password);
+            };
+
+            // Handle cancel
+            const handleCancel = () => {
+                // Clean up event listeners
+                form.removeEventListener('submit', handleSubmit);
+                closeBtn.removeEventListener('click', handleCancel);
+                cancelBtn.removeEventListener('click', handleCancel);
+                modal.removeEventListener('click', handleModalClick);
+                
+                // Hide modal
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                
+                // Resolve with null (cancelled)
+                resolve(null);
+            };
+
+            // Handle modal click outside
+            const handleModalClick = (e) => {
+                if (e.target === modal) {
+                    handleCancel();
+                }
+            };
+
+            // Add event listeners
+            form.addEventListener('submit', handleSubmit);
+            closeBtn.addEventListener('click', handleCancel);
+            cancelBtn.addEventListener('click', handleCancel);
+            modal.addEventListener('click', handleModalClick);
+        });
+    }
+
+    // Initialize resizable textarea
+    initResizableTextarea();
 }); 

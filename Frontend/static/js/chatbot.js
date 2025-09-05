@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load current knowledge base name on page load
     loadCurrentKnowledgeBase();
+    
+    // Automatically switch to default KB when opening Chatbot page
+    switchToDefaultKB();
 
     // Handle form submission
     chatForm.addEventListener('submit', function(e) {
@@ -191,7 +194,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const timestamp = new Date().toLocaleTimeString('ru-RU', { 
             hour: '2-digit', 
-            minute: '2-digit' 
+            minute: '2-digit',
+            timeZone: 'Europe/Moscow'
         });
 
         if (sender === 'user') {
@@ -208,10 +212,8 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         } else {
             messageDiv.innerHTML = `
-                <div class="w-8 h-8 bg-[#DC4918] rounded-full flex items-center justify-center flex-shrink-0">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                    </svg>
+                <div class="w-8 h-8 bg-[#DC4918] rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <img src="/static/avatar.png" alt="NeuroBot Avatar" class="w-full h-full object-cover rounded-full">
                 </div>
                 <div class="bot-message rounded-lg p-3 max-w-xs lg:max-w-md">
                     <p class="text-white">${formatMessageText(escapeHtml(text))}</p>
@@ -229,10 +231,8 @@ document.addEventListener('DOMContentLoaded', function() {
         typingDiv.id = 'typing-indicator';
         typingDiv.className = 'flex items-start space-x-3';
         typingDiv.innerHTML = `
-            <div class="w-8 h-8 bg-[#DC4918] rounded-full flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                </svg>
+            <div class="w-8 h-8 bg-[#DC4918] rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img src="/static/avatar.png" alt="NeuroBot Avatar" class="w-full h-full object-cover rounded-full">
             </div>
             <div class="bg-[#1E2328] rounded-lg p-3 border border-[#2D3446]">
                 <div class="typing-indicator">
@@ -262,13 +262,11 @@ document.addEventListener('DOMContentLoaded', function() {
         chatMessages.innerHTML = `
             <!-- Welcome Message -->
             <div class="flex items-start space-x-3">
-                <div class="w-8 h-8 bg-[#DC4918] rounded-full flex items-center justify-center flex-shrink-0">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                    </svg>
+                <div class="w-8 h-8 bg-[#DC4918] rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <img src="/static/avatar.png" alt="NeuroBot Avatar" class="w-full h-full object-cover rounded-full">
                 </div>
                 <div class="bot-message rounded-lg p-3 max-w-xs lg:max-w-md">
-                    <p class="text-white">Привет! Я NeuroBot Assistant. Чем могу помочь?</p>
+                    <p class="text-white">Привет! Я NeuroBot. Давай проверим, как будут работать диалоги с текущими настройками. </p>
                     <span class="text-xs text-[#718096] mt-1 block">Сейчас</span>
                 </div>
             </div>
@@ -307,6 +305,28 @@ document.addEventListener('DOMContentLoaded', function() {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Function to automatically switch to default KB
+    async function switchToDefaultKB() {
+        try {
+            const response = await fetch('/api/knowledge-bases/default', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('Successfully switched to default KB');
+            } else {
+                console.error('Failed to switch to default KB:', data.error);
+            }
+        } catch (error) {
+            console.error('Error switching to default KB:', error);
+        }
     }
 
     // Focus input on page load

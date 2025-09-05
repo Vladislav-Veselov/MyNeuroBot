@@ -230,4 +230,44 @@ select,
 select option {
     color: white !important;
     background-color: #242A36 !important;
+}
+
+/* Resizable textarea styles */
+.resizable-textarea {
+    resize: vertical;
+    min-height: 100px;
+    max-height: 600px; /* 6 times the original height (4 rows * ~25px per row * 6) */
+    transition: height 0.1s ease;
+}
+
+.resizable-textarea:focus {
+    outline: none;
+    border-color: #DC4918;
+    box-shadow: 0 0 0 2px rgba(220, 73, 24, 0.2);
+}
+
+/* Resize handle styles */
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 12px;
+    background: linear-gradient(to right, #DC4918 0%, #DC4918 50%, transparent 50%, transparent 100%);
+    background-size: 30px 100%;
+    cursor: ns-resize;
+    border-radius: 0 0 0.5rem 0.5rem;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.resize-handle:hover {
+    opacity: 1;
+    background: linear-gradient(to right, #DC4918 0%, #DC4918 60%, transparent 60%, transparent 100%);
+    background-size: 25px 100%;
+}
+
+/* Container for resizable textarea */
+.relative {
+    position: relative;
 } 

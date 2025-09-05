@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Аналитика - NeuroBot</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='avatar.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css') }}">
@@ -161,8 +162,8 @@
                             </svg>
                         </div>
                         <div class="ml-4">
-                            <p class="text-sm font-medium text-[#A0AEC0]">Размер файла</p>
-                            <p class="text-2xl font-bold text-white" id="file-size">-</p>
+                            <p class="text-sm font-medium text-[#A0AEC0]">Количество лидов</p>
+                            <p class="text-2xl font-bold text-white" id="potential-clients-count">-</p>
                         </div>
                     </div>
                 </div>

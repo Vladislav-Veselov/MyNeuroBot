@@ -1,9 +1,14 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import uuid
+
+def get_moscow_time():
+    """Get current Moscow time."""
+    moscow_tz = timezone(timedelta(hours=3))
+    return datetime.now(moscow_tz)
 
 class DialogueStorage:
     def __init__(self, storage_file: str = "dialogues.json"):
@@ -22,8 +27,8 @@ class DialogueStorage:
         if not self.storage_file.exists():
             self._save_all_sessions({
                 "metadata": {
-                    "created_at": datetime.now().isoformat(),
-                    "last_updated": datetime.now().isoformat(),
+                    "created_at": get_moscow_time().isoformat(),
+                    "last_updated": get_moscow_time().isoformat(),
                     "total_sessions": 0
                 },
                 "sessions": {}
@@ -38,8 +43,8 @@ class DialogueStorage:
             print(f"Error loading sessions: {str(e)}")
             return {
                 "metadata": {
-                    "created_at": datetime.now().isoformat(),
-                    "last_updated": datetime.now().isoformat(),
+                    "created_at": get_moscow_time().isoformat(),
+                    "last_updated": get_moscow_time().isoformat(),
                     "total_sessions": 0
                 },
                 "sessions": {}
@@ -71,11 +76,11 @@ class DialogueStorage:
         session_id = str(uuid.uuid4())
         session_data = {
             "session_id": session_id,
-            "created_at": datetime.now().isoformat(),
+            "created_at": get_moscow_time().isoformat(),
             "messages": [],
             "metadata": {
                 "total_messages": 0,
-                "last_updated": datetime.now().isoformat(),
+                "last_updated": get_moscow_time().isoformat(),
                 "unread": True,
                 "potential_client": None,
                 "ip_address": ip_address,
@@ -123,12 +128,12 @@ class DialogueStorage:
                 "id": str(uuid.uuid4()),
                 "role": role,
                 "content": content,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": get_moscow_time().isoformat()
             }
             
             session_data["messages"].append(message)
             session_data["metadata"]["total_messages"] = len(session_data["messages"])
-            session_data["metadata"]["last_updated"] = datetime.now().isoformat()
+            session_data["metadata"]["last_updated"] = get_moscow_time().isoformat()
             
             # Mark session as unread when a new message is added
             session_data["metadata"]["unread"] = True
@@ -137,7 +142,7 @@ class DialogueStorage:
             session_data["metadata"]["potential_client"] = None
             
             # Update global metadata
-            all_data["metadata"]["last_updated"] = datetime.now().isoformat()
+            all_data["metadata"]["last_updated"] = get_moscow_time().isoformat()
             all_data["metadata"]["total_sessions"] = len(all_data["sessions"])
             
             self._save_all_sessions(all_data)
@@ -225,7 +230,7 @@ class DialogueStorage:
             if session_id in all_data["sessions"]:
                 del all_data["sessions"][session_id]
                 all_data["metadata"]["total_sessions"] = len(all_data["sessions"])
-                all_data["metadata"]["last_updated"] = datetime.now().isoformat()
+                all_data["metadata"]["last_updated"] = get_moscow_time().isoformat()
                 
                 self._save_all_sessions(all_data)
                 return True
@@ -245,8 +250,8 @@ class DialogueStorage:
         try:
             all_data = {
                 "metadata": {
-                    "created_at": datetime.now().isoformat(),
-                    "last_updated": datetime.now().isoformat(),
+                    "created_at": get_moscow_time().isoformat(),
+                    "last_updated": get_moscow_time().isoformat(),
                     "total_sessions": 0
                 },
                 "sessions": {}
@@ -275,12 +280,18 @@ class DialogueStorage:
                 for session in all_data["sessions"].values()
             )
             
+            # Count potential clients (sessions marked as "Лид!")
+            potential_clients_count = sum(
+                1 for session in all_data["sessions"].values()
+                if session["metadata"].get("potential_client") is True
+            )
+            
             return {
                 "total_sessions": all_data["metadata"]["total_sessions"],
                 "total_messages": total_messages,
                 "storage_created": all_data["metadata"]["created_at"],
                 "last_updated": all_data["metadata"]["last_updated"],
-                "file_size_mb": round(self.storage_file.stat().st_size / (1024 * 1024), 2) if self.storage_file.exists() else 0
+                "potential_clients_count": potential_clients_count
             }
         except Exception as e:
             print(f"Error getting storage stats: {str(e)}")
@@ -302,10 +313,10 @@ class DialogueStorage:
             if session_id in all_data["sessions"]:
                 session_data = all_data["sessions"][session_id]
                 session_data["metadata"]["unread"] = False
-                session_data["metadata"]["last_updated"] = datetime.now().isoformat()
+                session_data["metadata"]["last_updated"] = get_moscow_time().isoformat()
                 
                 # Update global metadata
-                all_data["metadata"]["last_updated"] = datetime.now().isoformat()
+                all_data["metadata"]["last_updated"] = get_moscow_time().isoformat()
                 
                 self._save_all_sessions(all_data)
                 return True
@@ -332,10 +343,10 @@ class DialogueStorage:
             if session_id in all_data["sessions"]:
                 session_data = all_data["sessions"][session_id]
                 session_data["metadata"]["potential_client"] = is_potential_client
-                session_data["metadata"]["last_updated"] = datetime.now().isoformat()
+                session_data["metadata"]["last_updated"] = get_moscow_time().isoformat()
                 
                 # Update global metadata
-                all_data["metadata"]["last_updated"] = datetime.now().isoformat()
+                all_data["metadata"]["last_updated"] = get_moscow_time().isoformat()
                 
                 self._save_all_sessions(all_data)
                 return True

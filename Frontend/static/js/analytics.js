@@ -111,11 +111,15 @@ class AnalyticsManager {
                 // Always refresh sessions to show updated potential client status
                 this.loadSessions();
                 this.filterSessions();
+                // Refresh statistics to update the "Количество лидов" count
+                this.loadStatistics();
             } else {
                 console.error('Failed to analyze sessions:', data.error);
                 // Still refresh sessions even if analysis failed
                 this.loadSessions();
                 this.filterSessions();
+                // Refresh statistics even if analysis failed
+                this.loadStatistics();
             }
         } catch (error) {
             console.error('Error analyzing sessions:', error);
@@ -207,7 +211,7 @@ class AnalyticsManager {
         document.getElementById('total-sessions').textContent = stats.total_sessions || 0;
         document.getElementById('total-messages').textContent = stats.total_messages || 0;
         document.getElementById('storage-created').textContent = this.formatDate(stats.last_updated);
-        document.getElementById('file-size').textContent = `${stats.file_size_mb || 0} МБ`;
+        document.getElementById('potential-clients-count').textContent = stats.potential_clients_count || 0;
     }
 
     async loadKnowledgeBases() {
@@ -505,7 +509,6 @@ class AnalyticsManager {
     createMessageElement(message) {
         const timestamp = this.formatDate(message.timestamp);
         const isUser = message.role === 'user';
-        const avatarText = 'B'; // Only bot gets avatar
         const avatarClass = isUser ? 'user' : 'assistant';
         
         if (isUser) {
@@ -519,10 +522,12 @@ class AnalyticsManager {
                 </div>
             `;
         } else {
-            // Bot message - with avatar, #3A7F87 bubble
+            // Bot message - with avatar image, #3A7F87 bubble
             return `
                 <div class="analytics-message ${avatarClass}" style="display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; min-height: auto; height: auto;">
-                    <div class="analytics-avatar ${avatarClass}" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.875rem; flex-shrink: 0; background: #3A7F87; color: white;">${avatarText}</div>
+                    <div class="analytics-avatar ${avatarClass}" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; background: #3A7F87;">
+                        <img src="/static/avatar.png" alt="NeuroBot Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                    </div>
                     <div class="analytics-content ${avatarClass}" style="max-width: 70%; padding: 4px 8px; border-radius: 12px; word-wrap: break-word; white-space: pre-wrap; background: #3A7F87; color: white; border: none; border-bottom-left-radius: 4px; min-height: auto; height: auto; display: flex; flex-direction: column; align-items: flex-start;">
                         <div class="analytics-bubble" style="word-wrap: break-word; white-space: pre-wrap; line-height: 1.2; margin: 0; padding: 0; min-height: auto; height: auto; display: block; font-size: 14px;">${this.escapeHtml(message.content)}</div>
                         <div class="analytics-timestamp ${avatarClass}" style="font-size: 0.75rem; color: rgba(209, 213, 219, 0.7); margin-top: 4px; text-align: left;">${timestamp}</div>
@@ -645,6 +650,9 @@ class AnalyticsManager {
                 // Refresh sessions to show updated status
                 this.loadSessions();
                 this.filterSessions();
+                // Refresh statistics to update the "Количество лидов" count immediately
+                await this.loadStatistics();
+                console.log('Statistics refreshed after potential client toggle');
             } else {
                 console.error('Failed to toggle potential client:', data.error);
                 alert('Ошибка при изменении статуса клиента');
@@ -666,7 +674,8 @@ class AnalyticsManager {
         if (diffDays === 0) {
             return date.toLocaleTimeString('ru-RU', { 
                 hour: '2-digit', 
-                minute: '2-digit' 
+                minute: '2-digit',
+                timeZone: 'Europe/Moscow'
             });
         } else if (diffDays === 1) {
             return 'Вчера';
@@ -676,7 +685,8 @@ class AnalyticsManager {
             return date.toLocaleDateString('ru-RU', {
                 day: '2-digit',
                 month: '2-digit',
-                year: 'numeric'
+                year: 'numeric',
+                timeZone: 'Europe/Moscow'
             });
         }
     }

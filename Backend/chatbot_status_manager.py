@@ -54,11 +54,11 @@ class ChatbotStatusManager:
             if not status_file:
                 return False
             
-            from datetime import datetime
+            from datetime import datetime, timezone, timedelta
             
             status = {
                 "stopped": True,
-                "stopped_at": datetime.now().isoformat(),
+                "stopped_at": datetime.now(timezone(timedelta(hours=3))).isoformat(),
                 "stopped_by": stopped_by,
                 "message": message
             }
@@ -77,6 +77,12 @@ class ChatbotStatusManager:
     def start_chatbots(self) -> bool:
         """Start all chatbots for the current user."""
         try:
+            # Check if bots were stopped by admin
+            current_status = self.get_chatbot_status()
+            if current_status.get("stopped", False) and current_status.get("stopped_by") == "admin":
+                # Bots were stopped by admin, user cannot start them
+                return False
+            
             status_file = self.get_status_file_path()
             if not status_file:
                 return False

@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from vectorize import rebuild_vector_store
 
 kb_api_bp = Blueprint('kb_api', __name__)
@@ -108,14 +108,16 @@ def write_knowledge_file(documents: list[dict], kb_id: str | None = None) -> Non
         kb_info = {}
     
     # Update timestamp and document count
-    kb_info['updated_at'] = datetime.now().isoformat()
+    moscow_tz = timezone(timedelta(hours=3))
+    kb_info['updated_at'] = datetime.now(moscow_tz).isoformat()
     kb_info['document_count'] = len(documents)
     
     # Preserve other fields if they exist
     if 'name' not in kb_info:
         kb_info['name'] = kb_id or get_current_kb_id()
     if 'created_at' not in kb_info:
-        kb_info['created_at'] = datetime.now().isoformat()
+        moscow_tz = timezone(timedelta(hours=3))
+        kb_info['created_at'] = datetime.now(moscow_tz).isoformat()
     if 'analyze_clients' not in kb_info:
         kb_info['analyze_clients'] = True
     
@@ -244,10 +246,11 @@ def create_knowledge_base():
         with open(password_file, 'w', encoding='utf-8') as f:
             f.write(kb_password)
         
+        moscow_tz = timezone(timedelta(hours=3))
         kb_info = {
             'name': kb_name,
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat(),
+            'created_at': datetime.now(moscow_tz).isoformat(),
+            'updated_at': datetime.now(moscow_tz).isoformat(),
             'document_count': 0,
             'analyze_clients': analyze_clients
         }
@@ -281,12 +284,46 @@ def switch_knowledge_base(kb_id):
         if not kb_dir.exists():
             return jsonify({'error': 'База знаний не найдена'}), 404
         
+        # Check if KB has password protection (not default KB)
+        if kb_id != 'default':
+            password_file = kb_dir / "password.txt"
+            if password_file.exists():
+                # Get password from request
+                data = request.get_json() or {}
+                provided_password = data.get('password', '').strip()
+                
+                if not provided_password:
+                    return jsonify({'error': 'Требуется пароль для переключения на эту базу знаний'}), 400
+                
+                # Read stored password
+                with open(password_file, 'r', encoding='utf-8') as f:
+                    stored_password = f.read().strip()
+                
+                # Validate password
+                if provided_password != stored_password:
+                    return jsonify({'error': 'Неверный пароль'}), 401
+        
         with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
             json.dump({'current_kb_id': kb_id}, f, ensure_ascii=False, indent=2)
         
         return jsonify({'success': True, 'kb_id': kb_id})
     except Exception as e:
         print(f"Error in switch_knowledge_base: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@kb_api_bp.route('/knowledge-bases/default', methods=['PUT'])
+@login_required
+def switch_to_default_knowledge_base():
+    """API endpoint to switch to the default knowledge base."""
+    try:
+        user_data_dir = get_current_user_data_dir()
+        
+        with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
+            json.dump({'current_kb_id': 'default'}, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True, 'kb_id': 'default'})
+    except Exception as e:
+        print(f"Error in switch_to_default_knowledge_base: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @kb_api_bp.route('/knowledge-bases/<kb_id>', methods=['DELETE'])
@@ -337,7 +374,8 @@ def rename_knowledge_base(kb_id):
             kb_info = {}
         
         kb_info['name'] = new_name
-        kb_info['updated_at'] = datetime.now().isoformat()
+        moscow_tz = timezone(timedelta(hours=3))
+        kb_info['updated_at'] = datetime.now(moscow_tz).isoformat()
         
         with open(kb_info_file, 'w', encoding='utf-8') as f:
             json.dump(kb_info, f, ensure_ascii=False, indent=2)
@@ -395,7 +433,8 @@ def change_kb_analyze_clients(kb_id):
             kb_info = json.load(f)
         
         kb_info['analyze_clients'] = analyze_clients
-        kb_info['updated_at'] = datetime.now().isoformat()
+        moscow_tz = timezone(timedelta(hours=3))
+        kb_info['updated_at'] = datetime.now(moscow_tz).isoformat()
         
         with open(kb_info_file, 'w', encoding='utf-8') as f:
             json.dump(kb_info, f, ensure_ascii=False, indent=2)
@@ -504,9 +543,12 @@ def get_stats():
                 updated_at = kb_info.get('updated_at', '')
                 if updated_at:
                     try:
-                        # Parse ISO format and format for display
+                        # Parse ISO format and format for display in Moscow time
                         dt = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
-                        last_update = dt.strftime('%d.%m.%Y %H:%M')
+                        # Convert to Moscow timezone (UTC+3)
+                        moscow_tz = timezone(timedelta(hours=3))
+                        dt_moscow = dt.astimezone(moscow_tz)
+                        last_update = dt_moscow.strftime('%d.%m.%Y %H:%M')
                     except:
                         last_update = "Неизвестно"
         

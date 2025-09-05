@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Настройки - NeuroBot</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='avatar.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.css') }}">
 </head>
@@ -190,9 +191,12 @@
                         <label for="additional-prompt" class="block text-lg font-medium text-white mb-3">
                             Дополнительный промпт
                         </label>
-                        <textarea id="additional-prompt" name="additional_prompt" rows="4" 
-                                  class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918] resize-none"
-                                  placeholder="Введите дополнительные инструкции для чат-бота (например, специализация, стиль ответов, ограничения)..."></textarea>
+                        <div class="relative">
+                            <textarea id="additional-prompt" name="additional_prompt" rows="4" 
+                                      class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918] resize-vertical resizable-textarea"
+                                      placeholder="Введите дополнительные инструкции для чат-бота (например, специализация, стиль ответов, ограничения)..."></textarea>
+                            <div class="resize-handle"></div>
+                        </div>
                         <p class="text-sm text-[#A0AEC0] mt-2">
                             Эти инструкции будут добавлены к каждому запросу для настройки поведения бота
                         </p>
@@ -327,6 +331,35 @@
         });
     </script>
 
+    <!-- KB Password Prompt Modal for Settings -->
+    <div id="settings-kb-password-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-[#242A36] rounded-lg shadow-xl max-w-md w-full mx-4" style="background-color: #242A36 !important;">
+            <div class="p-6" style="background-color: #242A36 !important;">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-white">Введите пароль базы знаний</h3>
+                    <button id="close-settings-kb-password-modal" class="text-[#718096] hover:text-white">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <form id="settings-kb-password-form" class="space-y-4" style="background-color: #242A36 !important;">
+                    <div>
+                        <label for="settings-kb-password-input" class="block text-sm font-medium text-[#A0AEC0] mb-1">Пароль для базы знаний "<span id="settings-kb-password-name"></span>"</label>
+                        <input type="password" id="settings-kb-password-input" name="password" 
+                               class="w-full px-3 py-2 rounded-lg bg-[#242A36] border border-[#2D3446] text-white focus:outline-none focus:ring-2 focus:ring-[#DC4918]"
+                               placeholder="Введите пароль...">
+                    </div>
+                    <div id="settings-kb-password-error" class="text-[#DC4918] text-sm"></div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" id="cancel-settings-kb-password" class="btn-outline">Отмена</button>
+                        <button type="submit" class="btn-primary">Переключиться</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- KB Details Modal for Settings -->
     <div id="settings-kb-details-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-[#242A36] rounded-lg shadow-xl max-w-md w-full mx-4" style="background-color: #242A36 !important;">
@@ -369,9 +402,6 @@
                 </div>
                 <div class="flex justify-between mt-6">
                     <button id="delete-settings-kb-btn" type="button" class="btn-danger">
-                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
                         Удалить базу знаний
                     </button>
                     <button id="close-settings-kb-details" class="btn-outline">Закрыть</button>

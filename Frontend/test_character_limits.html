@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Character Limits</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1A1E27;
+            color: white;
+        }
+        .test-section {
+            background-color: #242A36;
+            border: 1px solid #2D3446;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #2D3446;
+            border-radius: 4px;
+            background-color: #242A36;
+            color: white;
+            margin-bottom: 5px;
+        }
+        .counter {
+            text-align: right;
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 10px;
+        }
+        .error {
+            color: #DC4918;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        button {
+            background-color: #DC4918;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #FF6B35;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #2D3748;
+            border: 1px solid #48BB78;
+        }
+        .failure {
+            background-color: #2D3748;
+            border: 1px solid #DC4918;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Character Limit Validation</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Question Limit (250 characters)</h2>
+        <textarea id="test-question" maxlength="250" placeholder="Enter a question..."></textarea>
+        <div class="counter">
+            <span id="question-counter">0</span>/250 символов
+        </div>
+        <button onclick="testQuestionValidation()">Test Question Validation</button>
+        <div id="question-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Answer Limit (2500 characters)</h2>
+        <textarea id="test-answer" maxlength="2500" placeholder="Enter an answer..."></textarea>
+        <div class="counter">
+            <span id="answer-counter">0</span>/2500 символов
+        </div>
+        <button onclick="testAnswerValidation()">Test Answer Validation</button>
+        <div id="answer-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Combined Validation</h2>
+        <button onclick="testCombinedValidation()">Test Both Fields</button>
+        <div id="combined-result"></div>
+    </div>
+
+    <script>
+        // Character counter functionality
+        document.getElementById('test-question').addEventListener('input', function() {
+            document.getElementById('question-counter').textContent = this.value.length;
+        });
+        
+        document.getElementById('test-answer').addEventListener('input', function() {
+            document.getElementById('answer-counter').textContent = this.value.length;
+        });
+        
+        // Validation functions (same logic as in viewer.js)
+        function validateQuestion(question) {
+            if (!question) {
+                return 'Пожалуйста, введите вопрос.';
+            }
+            if (question.length > 250) {
+                return 'Вопрос слишком длинный. Максимальная длина вопроса - 250 символов.';
+            }
+            return null; // No error
+        }
+        
+        function validateAnswer(answer) {
+            if (!answer) {
+                return 'Пожалуйста, введите ответ.';
+            }
+            if (answer.length > 2500) {
+                return 'Ответ слишком длинный. Максимальная длина ответа - 2500 символов.';
+            }
+            return null; // No error
+        }
+        
+        function testQuestionValidation() {
+            const question = document.getElementById('test-question').value.trim();
+            const error = validateQuestion(question);
+            const resultDiv = document.getElementById('question-result');
+            
+            if (error) {
+                resultDiv.className = 'test-result failure';
+                resultDiv.innerHTML = `<strong>Validation Failed:</strong> ${error}`;
+            } else {
+                resultDiv.className = 'test-result success';
+                resultDiv.innerHTML = `<strong>Validation Passed:</strong> Question is valid (${question.length} characters)`;
+            }
+        }
+        
+        function testAnswerValidation() {
+            const answer = document.getElementById('test-answer').value.trim();
+            const error = validateAnswer(answer);
+            const resultDiv = document.getElementById('answer-result');
+            
+            if (error) {
+                resultDiv.className = 'test-result failure';
+                resultDiv.innerHTML = `<strong>Validation Failed:</strong> ${error}`;
+            } else {
+                resultDiv.className = 'test-result success';
+                resultDiv.innerHTML = `<strong>Validation Passed:</strong> Answer is valid (${answer.length} characters)`;
+            }
+        }
+        
+        function testCombinedValidation() {
+            const question = document.getElementById('test-question').value.trim();
+            const answer = document.getElementById('test-answer').value.trim();
+            const resultDiv = document.getElementById('combined-result');
+            
+            const questionError = validateQuestion(question);
+            const answerError = validateAnswer(answer);
+            
+            if (questionError || answerError) {
+                resultDiv.className = 'test-result failure';
+                let errorMessage = '<strong>Validation Failed:</strong><ul>';
+                if (questionError) errorMessage += `<li>Question: ${questionError}</li>`;
+                if (answerError) errorMessage += `<li>Answer: ${answerError}</li>`;
+                errorMessage += '</ul>';
+                resultDiv.innerHTML = errorMessage;
+            } else {
+                resultDiv.className = 'test-result success';
+                resultDiv.innerHTML = `<strong>Validation Passed:</strong> Both fields are valid (Question: ${question.length} chars, Answer: ${answer.length} chars)`;
+            }
+        }
+        
+        // Auto-fill test data
+        function fillTestData() {
+            // Fill with valid data
+            document.getElementById('test-question').value = 'This is a test question that is within the 250 character limit.';
+            document.getElementById('test-answer').value = 'This is a test answer that is within the 2500 character limit.';
+            
+            // Update counters
+            document.getElementById('question-counter').textContent = document.getElementById('test-question').value.length;
+            document.getElementById('answer-counter').textContent = document.getElementById('test-answer').value.length;
+        }
+        
+        // Add button to fill test data
+        const fillButton = document.createElement('button');
+        fillButton.textContent = 'Fill with Test Data';
+        fillButton.onclick = fillTestData;
+        fillButton.style.marginBottom = '20px';
+        document.body.insertBefore(fillButton, document.querySelector('.test-section'));
+    </script>
+</body>
+</html>

@@ -346,6 +346,15 @@ def stop_chatbots():
 def start_chatbots():
     """API endpoint to start all chatbots for the current user."""
     try:
+        # Check if bots were stopped by admin
+        current_status = chatbot_status_manager.get_chatbot_status()
+        if current_status.get("stopped", False) and current_status.get("stopped_by") == "admin":
+            return jsonify({
+                'success': False,
+                'error': 'Все ваши боты приостановлены админом',
+                'admin_stopped': True
+            }), 403
+        
         success = chatbot_status_manager.start_chatbots()
         
         if success:

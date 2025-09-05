@@ -322,7 +322,7 @@ class KnowledgeBaseManager {
             if (data.success) {
                 document.getElementById('kb-details-name').textContent = data.name;
                 document.getElementById('kb-details-id').textContent = data.kb_id;
-                document.getElementById('kb-details-created').textContent = new Date(data.created_at).toLocaleString('ru-RU');
+                document.getElementById('kb-details-created').textContent = new Date(data.created_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
                 document.getElementById('kb-details-docs').textContent = data.document_count;
                 
                 // Display the actual password
@@ -642,29 +642,168 @@ class KnowledgeBaseManager {
 
     async switchKnowledgeBase(kbId) {
         try {
-            const response = await fetch(`/api/knowledge-bases/${kbId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                this.currentKbId = kbId;
-                this.updateKbSelector();
+            // Check if KB requires password (not default KB)
+            if (kbId !== 'default') {
+                // Get KB details to check if it has a password
+                const kbDetailsResponse = await fetch(`/api/knowledge-bases/${kbId}`);
+                const kbDetails = await kbDetailsResponse.json();
                 
-                // Reload the page to refresh the knowledge base content
-                window.location.reload();
+                if (kbDetails.success && kbDetails.has_password) {
+                    // Show password prompt
+                    const password = await this.showPasswordPrompt(kbDetails.name);
+                    if (password === null) {
+                        // User cancelled
+                        return;
+                    }
+                    
+                    // Try to switch with password
+                    const response = await fetch(`/api/knowledge-bases/${kbId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ password: password })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.currentKbId = kbId;
+                        this.updateKbSelector();
+                        
+                        // Reload the page to refresh the knowledge base content
+                        window.location.reload();
+                    } else {
+                        console.error('Failed to switch knowledge base:', data.error);
+                        this.showNotification(data.error || 'Ошибка при переключении базы знаний.', 'error');
+                    }
+                } else {
+                    // KB doesn't have password, switch directly
+                    const response = await fetch(`/api/knowledge-bases/${kbId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.currentKbId = kbId;
+                        this.updateKbSelector();
+                        
+                        // Reload the page to refresh the knowledge base content
+                        window.location.reload();
+                    } else {
+                        console.error('Failed to switch knowledge base:', data.error);
+                        this.showNotification('Ошибка при переключении базы знаний.', 'error');
+                    }
+                }
             } else {
-                console.error('Failed to switch knowledge base:', data.error);
-                this.showNotification('Ошибка при переключении базы знаний.', 'error');
+                // Default KB, switch directly
+                const response = await fetch(`/api/knowledge-bases/${kbId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.currentKbId = kbId;
+                    this.updateKbSelector();
+                    
+                    // Reload the page to refresh the knowledge base content
+                    window.location.reload();
+                } else {
+                    console.error('Failed to switch knowledge base:', data.error);
+                    this.showNotification('Ошибка при переключении базы знаний.', 'error');
+                }
             }
         } catch (error) {
             console.error('Error switching knowledge base:', error);
             this.showNotification('Ошибка при переключении базы знаний.', 'error');
         }
+    }
+
+    showPasswordPrompt(kbName) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('kb-password-modal');
+            const passwordInput = document.getElementById('kb-password-input');
+            const passwordName = document.getElementById('kb-password-name');
+            const errorDiv = document.getElementById('kb-password-error');
+            const form = document.getElementById('kb-password-form');
+            const closeBtn = document.getElementById('close-kb-password-modal');
+            const cancelBtn = document.getElementById('cancel-kb-password');
+
+            // Set KB name
+            passwordName.textContent = kbName;
+            
+            // Clear previous values
+            passwordInput.value = '';
+            errorDiv.textContent = '';
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Focus on password input
+            setTimeout(() => passwordInput.focus(), 100);
+
+            // Handle form submission
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const password = passwordInput.value.trim();
+                
+                if (!password) {
+                    errorDiv.textContent = 'Пожалуйста, введите пароль';
+                    return;
+                }
+                
+                // Clean up event listeners
+                form.removeEventListener('submit', handleSubmit);
+                closeBtn.removeEventListener('click', handleCancel);
+                cancelBtn.removeEventListener('click', handleCancel);
+                modal.removeEventListener('click', handleModalClick);
+                
+                // Hide modal
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                
+                // Resolve with password
+                resolve(password);
+            };
+
+            // Handle cancel
+            const handleCancel = () => {
+                // Clean up event listeners
+                form.removeEventListener('submit', handleSubmit);
+                closeBtn.removeEventListener('click', handleCancel);
+                cancelBtn.removeEventListener('click', handleCancel);
+                modal.removeEventListener('click', handleModalClick);
+                
+                // Hide modal
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                
+                // Resolve with null (cancelled)
+                resolve(null);
+            };
+
+            // Handle modal click outside
+            const handleModalClick = (e) => {
+                if (e.target === modal) {
+                    handleCancel();
+                }
+            };
+
+            // Add event listeners
+            form.addEventListener('submit', handleSubmit);
+            closeBtn.addEventListener('click', handleCancel);
+            cancelBtn.addEventListener('click', handleCancel);
+            modal.addEventListener('click', handleModalClick);
+        });
     }
 
     showNotification(message, type = 'info') {

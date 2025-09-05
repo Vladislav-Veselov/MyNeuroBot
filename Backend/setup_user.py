@@ -7,7 +7,7 @@ import os
 import json
 import hashlib
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # Configuration
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -42,7 +42,7 @@ def setup_user():
     users[USERNAME] = {
         "password_hash": hash_password(PASSWORD),
         "email": "",
-        "created_at": datetime.now().isoformat(),
+        "created_at": datetime.now(timezone(timedelta(hours=3))).isoformat(),
         "last_login": None,
         "data_directory": user_data_directory,
         "is_admin": False
@@ -77,7 +77,7 @@ def setup_user():
     kb_info = {
         "name": "База знаний по умолчанию",
         "description": "Основная база знаний",
-        "created_at": datetime.now().isoformat(),
+        "created_at": datetime.now(timezone(timedelta(hours=3))).isoformat(),
         "document_count": 0
     }
     
