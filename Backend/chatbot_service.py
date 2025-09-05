@@ -11,7 +11,6 @@ import numpy as np
 from langchain_openai import OpenAIEmbeddings
 from dialogue_storage import get_dialogue_storage
 from session_manager import ip_session_manager
-from data_masking import data_masker
 from model_manager import model_manager
 from balance_manager import balance_manager
 from tenant_context import get_widget_settings_override  # NEW import
@@ -228,7 +227,7 @@ class ChatbotService:
 1. Отвечай ТОЛЬКО на основе предоставленной информации из базы знаний
 2. Если в базе знаний нет информации по вопросу, честно скажи об этом
 3. Не выдумывай информацию
-4. Если в сообщении есть маскированные данные, это значит, что пользователь отправил личные контакты. Сообщи пользователю, что контакты сохранены.
+4. Если пользователь отправил личные контакты, объясни пользователю, что контакты сохранены.
 
 ## ADDITIONAL INSTRUCTIONS
 {additional_prompt if additional_prompt else 'Нет дополнительных инструкций'}
@@ -284,23 +283,8 @@ class ChatbotService:
             # Get settings
             settings = self.get_settings()
             
-            # Mask personal information in user message before sending to OpenAI
-            masked_user_message, mask_info = data_masker.mask_all_personal_data(user_message)
-            
-            # Log masking information if any personal data was found
-            if mask_info.get('total_masked', 0) > 0:
-                print(f"\n🔒 PERSONAL DATA MASKED:")
-                print(f"   Emails: {len(mask_info.get('emails', []))}")
-                print(f"   Phones: {len(mask_info.get('phones', []))}")
-                print(f"   Credit Cards: {len(mask_info.get('credit_cards', []))}")
-                print(f"   Passports: {len(mask_info.get('passports', []))}")
-                print(f"   SSNs: {len(mask_info.get('ssns', []))}")
-                print(f"   Total masked items: {mask_info.get('total_masked', 0)}")
-                print(f"   Original message: {user_message}")
-                print(f"   Masked message: {masked_user_message}")
-            
-            # Search knowledge base using masked message
-            relevant_docs = self.search_knowledge_base(masked_user_message)
+            # Search knowledge base using original user message
+            relevant_docs = self.search_knowledge_base(user_message)
             
             # Build context from relevant documents
             context = ""
@@ -336,12 +320,11 @@ class ChatbotService:
                         for msg in last_messages
                     ]
             
-            # Mask personal information in conversation history before sending to OpenAI
-            masked_history = data_masker.mask_conversation_history(conversation_history)
-            messages.extend(masked_history)
+            # Use conversation history without masking
+            messages.extend(conversation_history)
             
-            # Add current user message (masked version for OpenAI)
-            messages.append({"role": "user", "content": masked_user_message})
+            # Add current user message
+            messages.append({"role": "user", "content": user_message})
             
             # Print the complete information sent to OpenAI
             print("================================================")

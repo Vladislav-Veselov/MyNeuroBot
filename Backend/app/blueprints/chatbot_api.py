@@ -6,7 +6,6 @@ from model_manager import model_manager
 from balance_manager import balance_manager
 from dialogue_storage import get_dialogue_storage
 from session_manager import ip_session_manager
-from data_masking import data_masker
 from openai import OpenAI
 import json
 import os
@@ -93,48 +92,30 @@ def analyze_unread_sessions_for_potential_clients():
                             print(f"Skipping analysis for session {session_id} - KB {kb_id} has analyze_clients=False")
                             continue
             
-            # Prepare conversation text for analysis with data masking
+            # Prepare conversation text for analysis
             conversation_text = ""
-            masked_items_count = 0
             
             for message in full_session['messages']:
                 role = "Пользователь" if message['role'] == 'user' else "Бот"
-                
-                # Apply data masking to user messages only
-                if message['role'] == 'user':
-                    masked_content, mask_info = data_masker.mask_all_personal_data(message['content'])
-                    masked_items_count += mask_info.get('total_masked', 0)
-                    conversation_text += f"{role}: {masked_content}\n"
-                else:
-                    # Bot messages don't need masking
-                    conversation_text += f"{role}: {message['content']}\n"
-            
-            # Log masking information if any personal data was found
-            if masked_items_count > 0:
-                print(f"\n🔒 PERSONAL DATA MASKED DURING CLIENT ANALYSIS:")
-                print(f"   Session ID: {session_id}")
-                print(f"   Total masked items: {masked_items_count}")
+                conversation_text += f"{role}: {message['content']}\n"
             
             # Analyze with OpenAI
             analysis_prompt = f"""
-            Проанализируй следующий диалог и определи, является ли пользователь потенциальным клиентом для компании.
+            Проанализируй следующий диалог и определи, является ли пользователь лидом для компании.
 
-            Критерии потенциального клиента:
-            - Пользователь интересуется товарами или услугами компании
-            - Задает уточняющие вопросы о продукте или услуге
-            - Просит связаться с человеком
+            Лид - это пользователь, который оставил свои контакты, или свой сайт, или запросил коммерческое предложение или демо. 
 
             Диалог:
             {conversation_text}
 
-            Твой ответ должен состоять из одного слова капсом. Ответь только "ДА" если пользователь является потенциальным клиентом, или "НЕТ" если нет.
+            Твой ответ должен состоять из одного слова капсом. Ответь только "ДА" если пользователь скорее является лидом, или "НЕТ" если скорее не является.
             """
             
             try:
                 response = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role": "system", "content": "Ты - аналитик, который определяет потенциальных клиентов на основе диалогов с чат-ботом. Отвечай только ДА или НЕТ."},
+                        {"role": "system", "content": "Ты - аналитик, который определяет лидов для компании на основе диалогов с чат-ботом. Отвечай только ДА или НЕТ."},
                         {"role": "user", "content": analysis_prompt}
                     ],
                     max_tokens=10,
