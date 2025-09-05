@@ -386,28 +386,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get KB name for confirmation
         const kbName = knowledgeBases.find(kb => kb.id === currentKbId)?.name || currentKbId;
         
-        // Check if this is the current active KB by getting the current KB from the backend
-        fetch('/api/knowledge-bases')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const currentActiveKb = data.knowledge_bases.find(kb => kb.id === data.current_kb_id);
-                
-                if (currentKbId === data.current_kb_id) {
-                    showMessage('Нельзя удалить активную базу знаний. Сначала переключитесь на другую базу знаний.', 'error');
-                    return;
-                }
-                
-                // Proceed with deletion
-                proceedWithDeletion(kbName);
-            } else {
-                showMessage('Ошибка при проверке активной базы знаний', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error checking current KB:', error);
-            showMessage('Ошибка при проверке активной базы знаний', 'error');
-        });
+        // Proceed with deletion (backend will handle switching to default if needed)
+        proceedWithDeletion(kbName);
     }
 
     function proceedWithDeletion(kbName) {
@@ -424,7 +404,11 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage(`База знаний "${kbName}" успешно удалена`, 'success');
+                let message = `База знаний "${kbName}" успешно удалена`;
+                if (data.switched_to_default) {
+                    message += '. Переключились на базу знаний по умолчанию.';
+                }
+                showMessage(message, 'success');
                 hideKbDetailsModal();
                 loadKnowledgeBases(); // Reload KB list
             } else {

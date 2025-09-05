@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_from_directory
+from flask import Blueprint, request, jsonify, send_from_directory, session
 from auth import login_required, get_current_user_data_dir
 from pathlib import Path
 import json
@@ -45,7 +45,15 @@ def get_current_kb_id() -> str:
     if override:
         return override
     
-    # Fallback: existing logic that reads current_kb.json
+    # Then prefer the Flask session (per-user/browser isolation)
+    try:
+        current_from_session = session.get('current_kb_id')
+        if current_from_session:
+            return current_from_session
+    except Exception:
+        pass
+
+    # Fallback: existing logic that reads current_kb.json (account-wide)
     try:
         user_data_dir = get_current_user_data_dir()
         current_kb_file = user_data_dir / "current_kb.json"
@@ -305,6 +313,11 @@ def switch_knowledge_base(kb_id):
         
         with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
             json.dump({'current_kb_id': kb_id}, f, ensure_ascii=False, indent=2)
+        # Also set per-session selection to avoid conflicts across concurrent users
+        try:
+            session['current_kb_id'] = kb_id
+        except Exception:
+            pass
         
         return jsonify({'success': True, 'kb_id': kb_id})
     except Exception as e:
@@ -320,6 +333,10 @@ def switch_to_default_knowledge_base():
         
         with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
             json.dump({'current_kb_id': 'default'}, f, ensure_ascii=False, indent=2)
+        try:
+            session['current_kb_id'] = 'default'
+        except Exception:
+            pass
         
         return jsonify({'success': True, 'kb_id': 'default'})
     except Exception as e:
@@ -338,13 +355,21 @@ def delete_knowledge_base(kb_id):
             return jsonify({'error': 'База знаний не найдена'}), 404
         
         current_kb_id = get_current_kb_id()
+        
+        # If trying to delete the current KB, switch to default first
         if kb_id == current_kb_id:
-            return jsonify({'error': 'Нельзя удалить активную базу знаний'}), 400
+            # Switch to default KB before deletion
+            with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
+                json.dump({'current_kb_id': 'default'}, f, ensure_ascii=False, indent=2)
+            try:
+                session['current_kb_id'] = 'default'
+            except Exception:
+                pass
         
         import shutil
         shutil.rmtree(kb_dir)
         
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'switched_to_default': kb_id == current_kb_id})
     except Exception as e:
         print(f"Error in delete_knowledge_base: {str(e)}")
         return jsonify({'error': str(e)}), 500

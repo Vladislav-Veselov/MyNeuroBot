@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from auth import login_required, get_current_user_data_dir
 from chatbot_service import chatbot_service
 from chatbot_status_manager import chatbot_status_manager
@@ -205,6 +205,10 @@ def chatbot_api():
             user_data_dir = get_current_user_data_dir()
             with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
                 json.dump({'current_kb_id': 'default'}, f, ensure_ascii=False, indent=2)
+            try:
+                session['current_kb_id'] = 'default'
+            except Exception:
+                pass
             
             # Create new session for KB switch
             dialogue_storage = get_dialogue_storage()
@@ -232,6 +236,10 @@ def chatbot_api():
             user_data_dir = get_current_user_data_dir()
             with open(user_data_dir / "current_kb.json", 'w', encoding='utf-8') as f:
                 json.dump({'current_kb_id': kb_id}, f, ensure_ascii=False, indent=2)
+            try:
+                session['current_kb_id'] = kb_id
+            except Exception:
+                pass
             
             # Get KB name for response
             kb_dir = user_data_dir / "knowledge_bases" / kb_id
