@@ -676,6 +676,8 @@ class KnowledgeBaseManager {
                     } else {
                         console.error('Failed to switch knowledge base:', data.error);
                         this.showNotification(data.error || 'Ошибка при переключении базы знаний.', 'error');
+                        // Revert selector to previous KB
+                        this.updateKbSelector();
                     }
                 } else {
                     // KB doesn't have password, switch directly
@@ -697,6 +699,8 @@ class KnowledgeBaseManager {
                     } else {
                         console.error('Failed to switch knowledge base:', data.error);
                         this.showNotification('Ошибка при переключении базы знаний.', 'error');
+                        // Revert selector to previous KB
+                        this.updateKbSelector();
                     }
                 }
             } else {
@@ -719,11 +723,15 @@ class KnowledgeBaseManager {
                 } else {
                     console.error('Failed to switch knowledge base:', data.error);
                     this.showNotification('Ошибка при переключении базы знаний.', 'error');
+                    // Revert selector to previous KB
+                    this.updateKbSelector();
                 }
             }
         } catch (error) {
             console.error('Error switching knowledge base:', error);
             this.showNotification('Ошибка при переключении базы знаний.', 'error');
+            // Revert selector to previous KB on any error
+            this.updateKbSelector();
         }
     }
 

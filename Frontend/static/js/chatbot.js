@@ -9,9 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load current knowledge base name on page load
     loadCurrentKnowledgeBase();
-    
-    // Automatically switch to default KB when opening Chatbot page
-    switchToDefaultKB();
 
     // Handle form submission
     chatForm.addEventListener('submit', function(e) {

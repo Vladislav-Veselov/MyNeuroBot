@@ -29,9 +29,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set initial state
         kbSelector.innerHTML = '<option value="">Загрузка...</option>';
         
-        // Automatically switch to default KB when opening Settings page
-        switchToDefaultKB();
-        
         loadKnowledgeBases();
         loadChatbotStatus();
         loadModelConfig();
@@ -89,15 +86,15 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 knowledgeBases = data.knowledge_bases || []; // Ensure it's an array
-                updateKbSelector();
-                
-                // Set currentKbId to the actual current KB from backend, not the first one
+                // Set currentKbId to the actual current KB from backend session
                 if (data.current_kb_id) {
                     currentKbId = data.current_kb_id;
                 } else if (knowledgeBases.length > 0) {
                     currentKbId = knowledgeBases[0].id;
                 }
-                
+
+                updateKbSelector();
+
                 // Load settings for the current KB
                 if (currentKbId) {
                     loadSettingsForKb(currentKbId);
@@ -137,8 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
             option.textContent = kb.name;
             option.style.backgroundColor = '#242A36';
             option.style.color = 'white';
-            // Always select the default KB since we switch to it on page load
-            if (kb.id === 'default') {
+            if (kb.id === currentKbId) {
                 option.selected = true;
             }
             kbSelector.appendChild(option);
@@ -672,7 +668,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.success) {
                         currentKbId = kbId;
                         loadSettingsForKb(currentKbId);
-                        showMessage(`Переключено на базу знаний "${kbDetails.name}"`, 'success');
+                        const kbName = (knowledgeBases.find(k => k.id === kbId) || {}).name || kbId;
+                        showMessage(`Переключено на базу знаний "${kbName}"`, 'success');
                     } else {
                         console.error('Failed to switch knowledge base:', data.error);
                         showMessage('Ошибка при переключении базы знаний.', 'error');
